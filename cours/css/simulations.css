@@ -1,0 +1,422 @@
+/*
+ * simulations.css — socle commun des simulations du cours Django.
+ *
+ * Différence assumée avec `widgets.css` (copié d'archi) : là-bas, chaque widget redéclare
+ * une cinquantaine de règles quasi identiques sous son propre préfixe — 1 187 lignes pour
+ * 24 widgets. Ici, les rôles partagés sont déclarés UNE fois en `sim-*`, et un préfixe
+ * propre à la simulation ne sert plus qu'à ce qui lui est vraiment spécifique.
+ *
+ *   <div class="sim-widget">
+ *     <div class="sim-stage"><svg class="sim-svg">…</svg></div>
+ *     <div class="sim-controls">…</div>
+ *     <div class="sim-readout">…</div>
+ *     <div class="sim-log">…</div>
+ *   </div>
+ *
+ * Toutes les couleurs viennent des variables de `theme-ipssi.css` : une simulation est
+ * correcte en clair et en sombre sans rien faire de plus.
+ */
+
+/* ---------------------------------------------------------------- structure */
+
+/* La scène doit DOMINER : c'est elle qu'on regarde, les contrôles ne sont qu'un pupitre.
+   D'où un plancher sur la première rangée — sans lui, une pile de réglages un peu longue
+   écrase le SVG jusqu'à le rendre illisible au vidéoprojecteur. */
+.sim-widget {
+  display: grid;
+  grid-template-rows: minmax(230px, 1fr) auto;
+  gap: 0.5em;
+  font-size: 0.52em;
+  height: 100%;
+  min-height: 0;
+}
+
+/* La scène prend la place restante et laisse le SVG se redimensionner — sans
+   `min-height: 0`, une grille CSS refuse de descendre sous la taille du contenu et le
+   diagramme déborde de la slide. */
+.sim-stage {
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  background: var(--bg-alt);
+  overflow: hidden;
+  min-height: 0;
+  display: flex;
+}
+
+.sim-svg {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: block;
+}
+
+/* Le pupitre : la pile réordonnable à gauche, les commandes et les relevés à droite.
+   Deux colonnes plutôt qu'un empilement — c'est ce qui rend la hauteur au SVG. */
+.sim-bas {
+  display: grid;
+  gap: 0.35em 0.8em;
+  grid-template-columns: minmax(11em, 0.9fr) minmax(0, 1.3fr);
+  align-items: start;
+}
+.sim-bas > .sim-colonne {
+  display: grid;
+  gap: 0.35em;
+  min-width: 0;
+}
+/* Un widget sans pile occupe toute la largeur. */
+.sim-bas.simple { grid-template-columns: minmax(0, 1fr); }
+
+/* ---------------------------------------------------------------- nœuds et liens */
+
+.sim-edge {
+  stroke: var(--fg-muted);
+  stroke-width: 2;
+  fill: none;
+}
+.sim-edge.faible { opacity: 0.35; }
+.sim-edge.coupe {
+  stroke: var(--danger);
+  stroke-dasharray: 4 4;
+  opacity: 0.6;
+}
+.sim-edge-label {
+  fill: var(--fg-muted);
+  font-size: 10px;
+  text-anchor: middle;
+}
+
+.sim-node-rect {
+  fill: var(--card-bg);
+  stroke: var(--card-border);
+  stroke-width: 2;
+  transition: stroke 0.2s ease, fill 0.2s ease;
+}
+.sim-node-text {
+  fill: var(--fg);
+  font-size: 12px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+.sim-node-sub {
+  fill: var(--fg-muted);
+  font-size: 10px;
+  font-weight: 600;
+  text-anchor: middle;
+}
+
+/* ⚠ Alignement : passer par une CLASSE, jamais par l'attribut `text-anchor` du SVG.
+   En SVG, une règle CSS l'emporte sur l'attribut de présentation — un
+   `text-anchor="start"` posé sur l'élément est silencieusement écrasé par le
+   `text-anchor: middle` ci-dessus, et le libellé déborde de son cadre sans erreur. */
+.sim-node-text.gauche,
+.sim-node-sub.gauche { text-anchor: start; }
+.sim-node-text.droite,
+.sim-node-sub.droite { text-anchor: end; }
+
+.sim-node.actif .sim-node-rect {
+  stroke: var(--accent);
+  filter: drop-shadow(0 0 5px var(--accent));
+}
+.sim-node.ok .sim-node-rect { stroke: var(--ok); }
+.sim-node.alerte .sim-node-rect { stroke: var(--warn); }
+.sim-node.hs .sim-node-rect {
+  stroke: var(--danger);
+  fill: color-mix(in srgb, var(--danger) 12%, var(--card-bg));
+}
+.sim-node.cliquable { cursor: pointer; }
+
+/* Un candidat écarté reste visible mais s'efface : on doit pouvoir compter les essais. */
+.sim-node.essaye .sim-node-rect {
+  stroke-dasharray: 5 4;
+  opacity: 0.55;
+}
+/* Jamais atteint — le cas le plus instructif : un motif masqué par un autre placé avant. */
+.sim-node.jamais .sim-node-rect {
+  stroke: var(--warn);
+  stroke-dasharray: 2 5;
+}
+.sim-node.jamais .sim-node-text,
+.sim-node.jamais .sim-node-sub { opacity: 0.5; }
+
+.sim-node-text.mono {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* ---------------------------------------------------------------- ce qui se déplace */
+
+/* L'objet en mouvement est le cœur d'une simulation : c'est lui qui prouve qu'on calcule
+   au lieu de sélectionner (cf. design/jeux/00-contrat-de-design.md §2 bis, test 3).
+   Deux rôles possibles : `.sim-packet` pour un mobile simple (un cercle qui se déplace),
+   `.sim-bloc` pour un assemblage (un PDU et ses enveloppes). `outils/banc-deck.py`
+   reconnaît les deux et mesure leur boîte à l'écran. */
+.sim-bloc { pointer-events: none; }
+
+.sim-packet {
+  fill: var(--accent);
+  transition: fill 0.15s ease;
+}
+.sim-packet.ok { fill: var(--ok); }
+.sim-packet.attente { fill: var(--warn); }
+.sim-packet.perdu { fill: var(--danger); }
+.sim-packet-label {
+  fill: var(--bg);
+  font-size: 9px;
+  font-weight: 700;
+  text-anchor: middle;
+  pointer-events: none;
+}
+/* Ce que transporte le paquet, écrit à côté de lui (un chemin, un identifiant). */
+.sim-packet-chemin {
+  fill: var(--accent);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* ------------------------------------------------- PDU emboîté (encapsulation) */
+
+/* Les enveloppes reprennent les couleurs de couche du jeu « Emballer, envoyer,
+   déballer » (`jeux.css`, .ts-h-*) : une même couche garde sa couleur d'un dispositif à
+   l'autre, ce qui évite à l'étudiant de réapprendre le code visuel. */
+.sim-enveloppe {
+  fill: none;
+  stroke-width: 2;
+}
+.sim-env-transport { stroke: var(--accent); fill: color-mix(in srgb, var(--accent) 8%, transparent); }
+.sim-env-internet { stroke: var(--accent-2); fill: color-mix(in srgb, var(--accent-2) 8%, transparent); }
+.sim-env-acces { stroke: var(--warn); fill: color-mix(in srgb, var(--warn) 8%, transparent); }
+.sim-charge { stroke: var(--ok); fill: color-mix(in srgb, var(--ok) 25%, var(--card-bg)); }
+
+/* Un segment perdu sur le lien, et ceux qui attendent leur tour. Ce sont les deux états qui
+   rendent le découpage et la perte lisibles SANS le journal (test 4) : on voit trois blocs
+   partir, et on voit lequel ne revient pas. */
+.sim-enveloppe.perdu {
+  stroke: var(--danger);
+  fill: color-mix(in srgb, var(--danger) 18%, transparent);
+  opacity: 0.75;
+}
+.sim-enveloppe.attente { opacity: 0.45; }
+
+.sim-bloc-txt {
+  fill: var(--fg);
+  font-size: 10px;
+  font-weight: 700;
+  text-anchor: middle;
+  pointer-events: none;
+}
+
+/* Les mêmes couleurs servent de pastilles dans la légende — d'où le `background` en
+   plus du `stroke`, l'un pour le SVG, l'autre pour le <i>. */
+.sim-legend i.sim-env-transport { background: var(--accent); }
+.sim-legend i.sim-env-internet { background: var(--accent-2); }
+.sim-legend i.sim-env-acces { background: var(--warn); }
+.sim-legend i.sim-charge { background: var(--ok); }
+
+/* ---------------------------------------------------------------- commandes */
+
+.sim-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4em 0.7em;
+}
+
+.sim-btn {
+  font: inherit;
+  font-weight: 600;
+  color: var(--fg);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: 0.3em 0.8em;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.sim-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.sim-btn.primary { border-color: var(--accent); color: var(--accent); }
+.sim-btn[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, var(--card-bg));
+  color: var(--accent);
+}
+.sim-btn:disabled { opacity: 0.45; cursor: default; }
+
+.sim-group {
+  display: inline-flex;
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.sim-group .sim-btn {
+  border: none;
+  border-radius: 0;
+  border-right: 1px solid var(--card-border);
+}
+.sim-group .sim-btn:last-child { border-right: none; }
+
+.sim-slider { display: inline-flex; align-items: center; gap: 0.4em; }
+.sim-slider input[type="range"] { accent-color: var(--accent); width: 8em; }
+.sim-slider b { color: var(--accent); font-variant-numeric: tabular-nums; }
+
+.sim-label { color: var(--fg-muted); }
+
+.sim-champ {
+  font: inherit;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  color: var(--fg);
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 8px;
+  padding: 0.3em 0.6em;
+  min-width: 16em;
+}
+.sim-champ:focus { outline: none; border-color: var(--accent); }
+
+/* --------------------------------------------- pile réordonnable (contrôle partagé) */
+
+/* Une liste ordonnée que l'étudiant permute : les middlewares, les urlpatterns… Le rang
+   est affiché parce que dans les deux cas c'est LUI le sujet — le premier qui répond
+   gagne. */
+.sim-pile {
+  display: grid;
+  gap: 0.25em;
+}
+.sim-pile-item {
+  display: flex;
+  align-items: center;
+  gap: 0.35em;
+  padding: 0.1em 0.35em;
+  border: 1px solid var(--card-border);
+  border-radius: 7px;
+  background: var(--card-bg);
+}
+.sim-pile-item .sim-btn { padding: 0 0.4em; line-height: 1.35; }
+.sim-pile-rang {
+  flex: 0 0 auto;
+  width: 1.5em;
+  text-align: center;
+  font-weight: 700;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.sim-pile-nom {
+  flex: 1 1 auto;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sim-pile-item.mort { opacity: 0.5; }
+.sim-pile-item.gagnant { border-color: var(--ok); }
+.sim-pile-item.coupe { border-color: var(--danger); }
+
+/* Texte flottant dans le SVG (annotation d'étape). */
+.sim-flottant {
+  fill: var(--fg-muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+.sim-flottant.gauche { text-anchor: start; }
+.sim-flottant.centre { text-anchor: middle; }
+.sim-flottant.droite { text-anchor: end; }
+
+/* La cible finale d'un trajet — la vue, la ressource — se distingue des couches. */
+.sim-node-rect.cible {
+  fill: color-mix(in srgb, var(--accent) 10%, var(--card-bg));
+  stroke: var(--accent-2);
+}
+
+/* ---------------------------------------------------------------- relevés */
+
+.sim-readout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3em 1.3em;
+  padding: 0.45em 0.8em;
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  background: var(--card-bg);
+}
+.sim-readout span { color: var(--fg-muted); }
+.sim-readout b {
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+  font-size: 1.15em;
+}
+.sim-readout b.ok { color: var(--ok); }
+.sim-readout b.alerte { color: var(--warn); }
+.sim-readout b.mauvais { color: var(--danger); }
+
+/* ---------------------------------------------------------------- journal */
+
+/* Le journal défile : il donne l'historique, c'est-à-dire la preuve que l'état a bougé. */
+.sim-log {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 0.92em;
+  line-height: 1.5;
+  max-height: 6.5em;
+  overflow-y: auto;
+  padding: 0.4em 0.7em;
+  border: 1px solid var(--code-border);
+  border-radius: 8px;
+  background: var(--code-bg);
+}
+/* Le message peut revenir à la ligne — un journal tronqué à droite ne sert à rien, et
+   c'est justement la fin de la phrase qui porte l'explication. */
+.sim-log-line { display: flex; gap: 0.6em; align-items: baseline; }
+.sim-log-line .t { flex: 0 0 auto; color: var(--fg-muted); font-variant-numeric: tabular-nums; }
+.sim-log-line .m { min-width: 0; }
+.sim-log-line.ok .m { color: var(--ok); }
+.sim-log-line.alerte .m { color: var(--warn); }
+.sim-log-line.mauvais .m { color: var(--danger); }
+.sim-log:empty { display: none; }
+
+/* ---------------------------------------------------------------- légende */
+
+/* Titre d'un panneau : dit CE QUE l'étudiant regarde. Une simulation projetée est expliquée
+   par la voix ; la même simulation dans la version étudiante ne l'est par personne. Le `em`
+   porte la convention de lecture, sur une deuxième ligne pour ne pas voler de hauteur. */
+.sim-titre {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1em;
+  margin-bottom: 0.3em;
+  line-height: 1.25;
+}
+.sim-titre code {
+  font-size: 0.95em;
+  color: var(--accent);
+  background: none;
+  padding: 0;
+}
+.sim-titre em {
+  font-style: normal;
+  font-size: 0.82em;
+  color: var(--fg-muted);
+}
+
+.sim-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3em 1em;
+  color: var(--fg-muted);
+}
+.sim-legend i {
+  display: inline-block;
+  width: 0.7em;
+  height: 0.7em;
+  border-radius: 50%;
+  margin-right: 0.3em;
+  vertical-align: baseline;
+}
+
+/* ---------------------------------------------------------------- accessibilité */
+
+/* Test 4 du contrat : quelque chose reste lisible en mouvement sans les libellés. Mais
+   pour qui coupe les animations, l'état doit rester lisible sans le mouvement. */
+@media (prefers-reduced-motion: reduce) {
+  .sim-packet,
+  .sim-node-rect { transition: none; }
+}

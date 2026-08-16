@@ -1,0 +1,511 @@
+/*
+ * pi-frames.css — habillage du moteur de pédagogie programmée (js/pi-frames.js).
+ *
+ * Contraintes de fond :
+ *  - tenir dans une slide reveal.js (1280 × 720 px logiques) sans scroll ;
+ *  - ne jamais faire « sauter » la mise en page entre la question et le feedback (une réponse
+ *    corrigée doit rester lisible à la même place : les zones prompt/feedback ont une hauteur
+ *    minimale réservée) ;
+ *  - rester lisible en clair comme en sombre — toutes les couleurs viennent de theme-ipssi.css ;
+ *  - le mode duel (.pi-root.duel) agrandit tout ce qui doit se lire à 4 m au vidéoprojecteur.
+ */
+
+/* La slide de jeu occupe toute la hauteur utile et borne le jeu : rien ne doit dépasser sous
+   la ligne de flottaison, sans quoi le bouton « Valider » sort de l'écran au vidéoprojecteur
+   dès que le feedback s'affiche.
+   ⚠ `!important` indispensable : reveal.js écrit `display` en style INLINE depuis son JS
+   (`showSlide()` applique l'option `display`, « block » par défaut) sur la slide affichée.
+   Aucune règle de feuille de style normale ne peut gagner — seule une déclaration importante
+   passe devant un style inline. Sans cela la slide reste en flux normal, plus rien ne borne
+   la hauteur, et le feedback pousse le bouton « Valider » hors de l'écran.
+   Changer l'option `display` de Reveal à « flex » serait pire : elle s'applique à TOUTES les
+   slides. */
+.reveal .slides > section > section.widget-slide.present,
+.reveal .slides > section.widget-slide.present {
+  display: flex !important;
+  flex-direction: column;
+  height: 100%;
+  max-height: 100%;
+}
+/* Titre allégé sur les slides de jeu : chaque pixel repris au bandeau va aux réponses. */
+.reveal .widget-slide h2 {
+  font-size: 1.05em;
+  padding-bottom: 0.12em;
+  margin-bottom: 0.25em;
+}
+/* Ne PAS toucher au `display` ici : ce conteneur est aussi la racine du jeu (.pi-root, en
+   grid), et cette règle est la plus spécifique — elle gagnerait. */
+.reveal .widget-slide > [data-widget-mount] {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.pi-root {
+  font-size: 0.44em;
+  line-height: 1.4;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 0.5em;
+  width: 100%;
+  min-height: 0;
+}
+.pi-root.duel { font-size: 0.5em; }
+
+/* ================= bandeau (progression, compteurs, chrono) ================= */
+
+.pi-hud {
+  display: grid;
+  gap: 0.35em;
+}
+.pi-progress {
+  height: 5px;
+  border-radius: 999px;
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  overflow: hidden;
+}
+.pi-progress-fill {
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  transition: width 0.3s ease;
+}
+.pi-metrics {
+  display: flex;
+  align-items: center;
+  gap: 0.55em;
+  flex-wrap: wrap;
+  font-size: 0.8em;
+  color: var(--fg-muted);
+}
+.pi-metric {
+  background: var(--bg-alt);
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
+  padding: 0.15em 0.7em;
+  white-space: nowrap;
+}
+.pi-metric b { color: var(--fg); font-variant-numeric: tabular-nums; }
+.pi-metric.streak b { color: var(--accent); }
+.pi-hud.perfect .pi-metric.rate { border-color: var(--ok); }
+.pi-hud.perfect .pi-metric.rate b { color: var(--ok); }
+.pi-chrono {
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-muted);
+  display: none;
+}
+.pi-metrics > .pi-btn { margin-left: auto; }
+
+.pi-root.duel .pi-metrics { font-size: 1.15em; }
+.pi-root.duel .pi-metric { padding: 0.2em 0.9em; border-width: 2px; }
+.pi-root.duel .pi-metric.streak { border-color: var(--accent); }
+.pi-root.duel .pi-chrono {
+  display: inline;
+  font-weight: 800;
+  font-size: 1.15em;
+  color: var(--fg);
+}
+
+/* ================= corps ================= */
+
+/* Empilement indice · scène · énoncé · réponse · feedback · actions. Flex plutôt que grid :
+   les blocs masqués (indice absent, scène absente) ne laissent alors ni piste ni gouttière. */
+.pi-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45em;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+.pi-body > * { flex: 0 0 auto; }
+
+/* ---- indice, avec ses trois degrés d'estompage ---- */
+.pi-hint {
+  display: none;
+  background: var(--bg-alt);
+  border: 1px dashed var(--card-border);
+  border-left: 3px solid var(--accent-2);
+  border-radius: 8px;
+  padding: 0.4em 0.75em;
+  color: var(--fg-muted);
+  font-size: 0.82em;
+  /* L'indice cède la place en premier quand la slide est chargée (facteur de rétrécissement
+     élevé), et s'affiche en entier dès qu'il y a de la place. */
+  flex: 0 3 auto;
+  min-height: 2.4em;
+  overflow-y: auto;
+}
+.pi-hint.show { display: block; }
+.pi-hint.compact {
+  font-size: 0.78em;
+  opacity: 0.75;
+  padding: 0.3em 0.7em;
+}
+.pi-hint b { color: var(--accent-2); }
+.pi-hint table { width: 100%; border-collapse: collapse; font-size: 0.95em; }
+.pi-hint td, .pi-hint th { padding: 0.06em 0.5em; text-align: left; }
+.pi-hint th { color: var(--accent-2); font-weight: 700; }
+.pi-hint code {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 4px;
+  padding: 0 0.25em;
+}
+
+.pi-btn.hint {
+  align-self: flex-start;
+  font-size: 0.85em;
+  border-style: dashed;
+  color: var(--fg-muted);
+}
+
+/* ---- scène (SVG / DOM propre au jeu) ---- */
+.pi-stage {
+  background: var(--bg-alt);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  padding: 0.4em;
+  min-height: 0;
+  flex: 0 2 auto;
+  overflow: hidden;
+}
+/* Le SVG se REDIMENSIONNE quand la scène rétrécit (feedback ouvert) au lieu d'être rogné :
+   height:100% dans un conteneur flex + viewBox = mise à l'échelle, pas découpe. */
+.pi-stage { display: flex; }
+.pi-stage svg { display: block; width: 100%; height: 100%; min-height: 0; max-height: 130px; }
+
+/* ---- énoncé ---- */
+.pi-prompt {
+  font-size: 1.05em;
+  font-weight: 600;
+  color: var(--fg);
+  min-height: 2.2em;
+}
+.pi-prompt code, .pi-feedback code, .pi-opt code {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 4px;
+  padding: 0 0.28em;
+  font-size: 0.92em;
+}
+.pi-retag {
+  background: var(--warn);
+  color: #1c2333;
+  border-radius: 999px;
+  padding: 0.05em 0.6em;
+  font-size: 0.7em;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  vertical-align: 0.15em;
+}
+
+/* ================= zones de réponse ================= */
+
+.pi-answer { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+
+/* ---- QCM ---- */
+.pi-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45em;
+}
+.pi-options.wide { grid-template-columns: 1fr; }
+.pi-opt {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  text-align: left;
+  font: inherit;
+  color: var(--fg);
+  background: var(--card-bg);
+  border: 2px solid var(--card-border);
+  border-radius: 10px;
+  padding: 0.5em 0.8em;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.pi-opt:hover { border-color: var(--accent); }
+.pi-opt.sel {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--card-bg));
+}
+.pi-opt.dead {
+  opacity: 0.45;
+  border-color: var(--danger);
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+.pi-opt.truth {
+  border-color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 15%, var(--card-bg));
+  opacity: 1;
+  text-decoration: none;
+}
+.pi-opt-key {
+  flex: 0 0 auto;
+  width: 1.6em;
+  height: 1.6em;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background: var(--bg-alt);
+  border: 1px solid var(--card-border);
+  font-size: 0.8em;
+  font-weight: 700;
+  color: var(--fg-muted);
+}
+/* layout "url" : le plateau de jeu est l'URL elle-même, découpée en morceaux cliquables */
+.pi-options.url {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.15em;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 10px;
+  padding: 0.6em;
+}
+.pi-options.url .pi-opt {
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1em;
+  padding: 0.35em 0.5em;
+  font-size: 1.05em;
+}
+.pi-options.url .pi-opt-key {
+  width: auto;
+  height: auto;
+  padding: 0 0.35em;
+  font-size: 0.6em;
+  background: transparent;
+  border: none;
+}
+.pi-options.url .pi-sep {
+  align-self: center;
+  color: var(--fg-muted);
+  font-family: inherit;
+  font-size: 1.05em;
+}
+
+.pi-options.multi .pi-opt-key { border-radius: 4px; }
+.pi-options.multi .pi-opt.sel .pi-opt-key {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+/* ---- cases + étiquettes ---- */
+.pi-slots { display: grid; gap: 0.5em; }
+.pi-slot-board { display: grid; gap: 0.45em; }
+.pi-slot {
+  background: var(--card-bg);
+  border: 2px dashed var(--card-border);
+  border-radius: 10px;
+  padding: 0.4em 0.5em;
+  min-height: 4.2em;
+  cursor: pointer;
+}
+.pi-slot.over { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--card-bg)); }
+.pi-slot-title { font-weight: 700; font-size: 0.85em; color: var(--accent); }
+.pi-slot-sub { font-size: 0.7em; color: var(--fg-muted); margin-bottom: 0.2em; }
+.pi-slot-drop { display: flex; flex-wrap: wrap; gap: 0.3em; min-height: 1.8em; }
+.pi-token-pool {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35em;
+  min-height: 2.4em;
+  background: var(--bg-alt);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  padding: 0.4em;
+}
+.pi-token {
+  display: inline-block;
+  background: var(--card-bg);
+  border: 1px solid var(--accent-2);
+  color: var(--fg);
+  border-radius: 999px;
+  padding: 0.2em 0.7em;
+  font: inherit;
+  font-size: 0.85em;
+  cursor: grab;
+  user-select: none;
+}
+.pi-token:hover { border-color: var(--accent); }
+.pi-token.held {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.pi-token.bad { border-color: var(--danger); color: var(--danger); }
+.pi-token.truth { border-color: var(--ok); }
+.pi-slots-tip { font-size: 0.72em; color: var(--fg-muted); }
+
+/* ---- mise en ordre ---- */
+.pi-order { display: grid; gap: 0.5em; }
+.pi-order-track {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35em;
+  list-style: none;
+  margin: 0;
+  padding: 0.4em;
+  min-height: 2.6em;
+  background: var(--bg-alt);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  counter-reset: step;
+}
+.pi-order-track li {
+  counter-increment: step;
+  background: var(--card-bg);
+  border: 1px solid var(--ok);
+  border-radius: 8px;
+  padding: 0.2em 0.7em;
+  font-size: 0.85em;
+  margin: 0;
+}
+.pi-order-track li::before {
+  content: counter(step) ". ";
+  color: var(--fg-muted);
+  font-weight: 700;
+}
+.pi-order-track li.truth { border-color: var(--warn); border-style: dashed; }
+.pi-order-pool { display: flex; flex-wrap: wrap; gap: 0.4em; }
+.pi-order-item {
+  font: inherit;
+  font-size: 0.88em;
+  background: var(--card-bg);
+  color: var(--fg);
+  border: 2px solid var(--card-border);
+  border-radius: 10px;
+  padding: 0.4em 0.8em;
+  cursor: pointer;
+}
+.pi-order-item:hover:not(:disabled) { border-color: var(--accent); }
+.pi-order-item:disabled { opacity: 0.3; cursor: default; }
+.pi-order-item.bad {
+  border-color: var(--danger);
+  animation: pi-shake 0.35s;
+}
+@keyframes pi-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+/* ---- construction d'une chaîne ---- */
+.pi-build { display: grid; gap: 0.45em; }
+.pi-build-prefix { font-size: 0.85em; color: var(--fg-muted); }
+.pi-build-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.1em;
+  min-height: 2.4em;
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 10px;
+  padding: 0.4em 0.6em;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+.pi-build-line.truth { border-color: var(--ok); }
+.pi-build-empty { color: var(--fg-muted); font-style: italic; font-family: inherit; font-size: 0.85em; }
+.pi-build-piece {
+  background: var(--card-bg);
+  border: 1px solid var(--accent);
+  border-radius: 5px;
+  padding: 0.1em 0.35em;
+  cursor: pointer;
+  font-size: 0.9em;
+}
+.pi-build-piece:hover { border-color: var(--danger); color: var(--danger); }
+.pi-build-pool { display: flex; flex-wrap: wrap; gap: 0.35em; }
+.pi-build-pool .pi-token { font-family: "SFMono-Regular", Consolas, monospace; cursor: pointer; }
+
+/* ---- saisie libre ---- */
+.pi-free-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+.pi-free-prefix { color: var(--fg-muted); font-size: 0.9em; }
+.pi-free {
+  flex: 1 1 auto;
+  font: inherit;
+  font-size: 1em;
+  color: var(--fg);
+  background: var(--code-bg);
+  border: 2px solid var(--code-border);
+  border-radius: 8px;
+  padding: 0.4em 0.7em;
+}
+.pi-free:focus { outline: none; border-color: var(--accent); }
+.pi-free.bad { border-color: var(--danger); }
+.pi-free.truth { border-color: var(--ok); }
+
+/* ================= feedback ================= */
+
+.pi-feedback {
+  display: none;
+  border-radius: 10px;
+  padding: 0.5em 0.8em;
+  font-size: 0.88em;
+  border: 1px solid var(--card-border);
+  background: var(--bg-alt);
+  min-height: 2.8em;
+  max-height: 7em;
+  overflow-y: auto;
+}
+.pi-feedback.show { display: block; }
+.pi-feedback.ok { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 12%, var(--bg-alt)); }
+.pi-feedback.partial { border-color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, var(--bg-alt)); }
+.pi-feedback.ko { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, var(--bg-alt)); }
+.pi-feedback b { color: var(--fg); }
+.pi-note {
+  margin-top: 0.25em;
+  font-size: 0.82em;
+  color: var(--fg-muted);
+}
+
+/* ================= actions ================= */
+
+.pi-actions { display: flex; gap: 0.5em; align-items: center; }
+.pi-btn {
+  font: inherit;
+  font-weight: 600;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  color: var(--fg);
+  border-radius: 8px;
+  padding: 0.4em 1em;
+  cursor: pointer;
+}
+.pi-btn:hover:not(:disabled) { border-color: var(--accent); }
+.pi-btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.pi-btn.primary:disabled { opacity: 0.4; cursor: not-allowed; }
+.pi-btn.ghost { font-size: 0.82em; color: var(--fg-muted); margin-left: auto; }
+
+/* ================= bilan ================= */
+
+.pi-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6em;
+}
+.pi-stat {
+  display: grid;
+  gap: 0.1em;
+  justify-items: center;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  padding: 0.5em 1.1em;
+  min-width: 6em;
+}
+.pi-stat b { font-size: 1.5em; color: var(--accent); font-variant-numeric: tabular-nums; }
+.pi-stat span { font-size: 0.75em; color: var(--fg-muted); }
+.pi-stat.best b { color: var(--accent-2); }

@@ -1,0 +1,19 @@
+# TP « Instrumenter Django » — dépendances épinglées.
+#
+#   python3 -m venv .venv
+#   source .venv/bin/activate      # Windows : .venv\Scripts\activate
+#   pip install -r requirements.txt
+#   python verifier.py             # doit afficher « environnement conforme »
+#
+# Python 3.10 minimum (Django 5.2 l'exige). Vérifier avec `python3 -V`.
+# Django 3.2, encore installé sur beaucoup de postes, est en fin de vie depuis
+# avril 2024 : ne pas s'en contenter.
+
+Django>=5.2,<5.3
+djangorestframework>=3.16,<4
+
+# Temps 5 uniquement — sur le projet Django du Jour 3, pas sur l'amorce.
+django-debug-toolbar>=6.0,<8
+
+# Facultatif : seulement si vous jouez la fiche en notebook plutôt qu'au REPL.
+jupyterlab>=4.2,<5

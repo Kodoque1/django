@@ -1,0 +1,564 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Architecture applicative Django — Jour 1</title>
+
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="../vendor/reveal/dist/reveal.css" />
+  <link rel="stylesheet" href="../vendor/reveal/dist/theme/black.css" id="reveal-theme" />
+  <link rel="stylesheet" href="../vendor/reveal/plugin/highlight/monokai.css" />
+  <link rel="stylesheet" href="../css/theme-ipssi.css" />
+  <link rel="stylesheet" href="../css/widgets.css" />
+  <link rel="stylesheet" href="../css/pi-frames.css" />
+  <link rel="stylesheet" href="../css/jeux.css" />
+  <link rel="stylesheet" href="../css/simulations.css" />
+</head>
+<body>
+  <div class="reveal">
+    <div class="slides">
+
+      <!-- ============================================================ -->
+      <!-- TITRE -->
+      <!-- ============================================================ -->
+      <section class="title-slide">
+        <div class="kicker">Mastère Dév, Data &amp; IA — 4ᵉ année · IPSSI</div>
+        <h1>Architecture applicative Django</h1>
+        <p class="subtitle">
+          Jour 1 — ce qui se passe entre l'URL et la réponse
+        </p>
+        <div class="modules-badge">
+          <span class="badge">Le cycle</span>
+          <span class="badge">URL &amp; routeur</span>
+          <span class="badge">Vues</span>
+          <span class="badge">Modèles</span>
+          <span class="badge">Admin</span>
+        </div>
+        <aside class="notes">
+          Enchaîne le module I : on vient de voir HTTP « vu du réseau », on regarde
+          maintenant HTTP « vu de Django ». Deux simulations, trois séries de frames.
+
+          OBJECTIFS (pour vous, pas à projeter) — suivre une requête à travers la chaîne des
+          middlewares, aller et retour, et prédire ce que change un déplacement · expliquer
+          pourquoi urlpatterns est une liste ordonnée et ce qu'un motif mal placé rend
+          inatteignable · choisir entre get(), get_object_or_404() et first(), et savoir quel
+          code chacun produit · reconnaître un QuerySet paresseux et le moment exact où il
+          touche la base.
+
+          Consigne de fond, à répéter : on prédit d'abord, on regarde ensuite. Faire écrire
+          les prédictions. Le TP d'instrumentation (temps 1, 2 et 3) fait mesurer tout ceci
+          sur un vrai Django — l'écart entre la prédiction et la mesure est le moment où ils
+          apprennent.
+        </aside>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- PARTIE 1 — LE CYCLE D'UNE REQUÊTE -->
+      <!-- ============================================================ -->
+      <section>
+        <section class="section-slide">
+          <div class="part-number">1</div>
+          <h1>Le cycle d'une requête</h1>
+          <p class="subtitle">Ce que Django fait avant d'arriver à votre code</p>
+        </section>
+
+        <section>
+          <h2>Un serveur web tient en six lignes</h2>
+          <div class="cols cols-2">
+            <div>
+              <pre><code class="language-python" data-trim data-noescape>serveur = socket.create_server(("", 8000))
+while True:
+    connexion, _ = serveur.accept()
+    donnees = connexion.recv(65536)
+    connexion.sendall(b"HTTP/1.1 200 OK\r\n\r\nbonjour")
+    connexion.close()</code></pre>
+            </div>
+            <div>
+              <p><span class="hl">Et c'est tout ce qu'il sait faire.</span></p>
+              <ul style="font-size:0.58em">
+                <li><code>donnees</code> est une suite d'octets : ni méthode, ni chemin, ni en-têtes</li>
+                <li>rien ne distingue <code>/produits/12/</code> de <code>/panier/</code></li>
+                <li>ni session, ni en-tête de sécurité, ni base de données</li>
+                <li>une exception coupe le serveur ; un deuxième client attend</li>
+              </ul>
+            </div>
+          </div>
+          <p><small>Ce code tourne — <code>/produits/12/</code> reçoit bien <code>bonjour</code>.
+            Aucun de ces manques n'est propre à une boutique : c'est du travail qu'on écrit
+            une fois et qu'on partage. <b>C'est ce qu'est un framework.</b></small></p>
+          <aside class="notes">
+            Le point d'entrée du module, et il vaut de s'y arrêter. Faire remarquer que les six
+            lignes tournent réellement (c'est vérifié) : le problème n'est pas qu'elles soient
+            fausses, c'est qu'il manque tout le reste. Demander à la salle de compléter la liste
+            de droite avant de la montrer — ils trouvent en général le routage et la base, plus
+            rarement la concurrence et la transformation des exceptions en codes d'état.
+
+            Django n'est pas la seule réponse possible : Flask, FastAPI et Express résolvent le
+            même problème avec d'autres arbitrages. Ce qui suit vaut pour la famille entière.
+          </aside>
+        </section>
+
+        <section>
+          <h2>Quatre fichiers, quatre responsabilités</h2>
+          <div class="cols cols-2">
+            <div class="card">
+              <h4><code>urls.py</code></h4>
+              La table des routes. Elle dit <em>quelle fonction</em> répond à <em>quel chemin</em>.
+            </div>
+            <div class="card">
+              <h4><code>views.py</code></h4>
+              Votre code. Il reçoit une requête, il renvoie une réponse.
+            </div>
+            <div class="card" style="margin-top:0.4em">
+              <h4><code>models.py</code></h4>
+              La forme des données, et la façon de les interroger sans écrire de SQL.
+            </div>
+            <div class="card" style="margin-top:0.4em">
+              <h4><code>settings.py</code></h4>
+              Les réglages — dont <code>MIDDLEWARE</code>, la liste qui nous occupe d'abord.
+            </div>
+          </div>
+          <p><small>Ces quatre fichiers suffisent à lire un projet Django. Le reste
+            (<code>wsgi.py</code>, <code>asgi.py</code>, <code>manage.py</code>) est de la plomberie
+            qu'on ne touche presque jamais.</small></p>
+          <aside class="notes">
+            Slide de VOCABULAIRE, pas de contenu : elle nomme les fichiers pour qu'on puisse en
+            parler. Ne rien expliquer de plus ici — la simulation et les frames font le travail.
+          </aside>
+        </section>
+
+        <section class="widget-slide" data-widget="middlewaresAllerRetour">
+          <h2>🔬 Les middlewares, à l'aller et au retour</h2>
+          <div data-widget-mount></div>
+          <aside class="notes">
+            À DIRE AVANT DE TOUCHER QUOI QUE CE SOIT — trois phrases, pas plus :
+
+            · Ce qu'on voit : la pile de gauche EST la liste MIDDLEWARE de settings.py, dans
+              l'ordre où elle y est écrite. La scène au-dessus montre la requête qui descend
+              cette pile, atteint la vue, et remonte.
+            · Ce qu'on manipule : l'ordre des couches (les flèches), et la présence du badge
+              dans la requête. Rien d'autre.
+            · Ce qu'on cherche : l'ordre est la seule chose qui décide qui voit quoi. Une couche
+              qui coupe empêche toutes celles du dessous d'exister — à l'aller comme au retour.
+
+            Puis, à piloter en direct en faisant prédire avant chaque envoi. Déroulé conseillé :
+
+            1. Envoyer sans badge : le Videur coupe, demi-tour, la vue n'est jamais atteinte.
+               Faire remarquer que Chrono, placé SOUS le Videur, n'a rien mesuré.
+            2. Faire prédire : « si je remonte Chrono tout en haut, l'en-tête revient-il ? »
+               Puis le faire. Oui — parce qu'il voit passer la réponse au retour.
+            3. Activer le badge : la requête descend jusqu'à la vue et remonte toute la chaîne.
+            4. Question ouverte : « pourquoi Security est-il en haut par défaut ? »
+               Réponse à faire construire : parce qu'il doit agir même sur les réponses que
+               les autres court-circuitent.
+
+            Le trajet n'est pas un scénario enregistré : il est recalculé à chaque envoi depuis
+            l'ordre courant. On peut donc suivre n'importe quelle proposition de la salle.
+          </aside>
+        </section>
+
+        <section>
+          <h2>Récapitulatif — la chaîne par défaut</h2>
+          <pre><code class="language-python" data-trim data-noescape>MIDDLEWARE = [
+    "django.middleware.security.SecurityMiddleware",      # en haut : agit sur TOUTES les réponses
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",          # APPEND_SLASH vit ici
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",  # pose request.user
+    "django.contrib.messages.middleware.MessageMiddleware",
+]</code></pre>
+          <p><small>L'ordre n'est pas décoratif : <code>AuthenticationMiddleware</code> doit être
+            <em>après</em> <code>SessionMiddleware</code>, sinon il n'a pas de session où lire
+            l'utilisateur. Une chaîne mal ordonnée ne lève aucune erreur — elle produit
+            silencieusement le mauvais comportement.</small></p>
+          <aside class="notes">
+            Slide de RÉFÉRENCE, après la simulation. Le temps 2 du TP fait écrire à l'étudiant
+            son propre middleware et constater, en Python, exactement ce qui vient d'être vu.
+          </aside>
+        </section>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- PARTIE 2 — URL ET ROUTEUR -->
+      <!-- ============================================================ -->
+      <section>
+        <section class="section-slide">
+          <div class="part-number">2</div>
+          <h1>URL et routeur</h1>
+          <p class="subtitle">Une URL arrive. Quelle fonction doit répondre ?</p>
+          <aside class="notes">
+            Le problème à poser : une application a des dizaines de chemins, dont beaucoup se ressemblent — /produits/, /produits/12/, /produits/nouveautes/. Le serveur reçoit une chaîne de caractères et doit en tirer une fonction et ses arguments. Demander comment on décide, et ce qui se passe quand deux chemins pourraient convenir.
+          </aside>
+        </section>
+
+        <section>
+          <h2>Le même serveur, avec deux pages</h2>
+          <div class="cols cols-2">
+            <div>
+              <pre><code class="language-python" data-trim data-noescape>donnees = connexion.recv(65536)
+
+if donnees.startswith(b"GET /produits/ "):
+    corps = liste()
+elif donnees.startswith(b"GET /produits/"):
+    pk = int(donnees.split(b"/")[2])
+    corps = detail(pk)
+elif donnees.startswith(b"GET /panier/"):
+    corps = panier()
+else:
+    corps = b"HTTP/1.1 404 Not Found\r\n\r\n"</code></pre>
+            </div>
+            <div>
+              <p><span class="hl">Trente chemins, trente <code>elif</code>.</span></p>
+              <ul style="font-size:0.58em">
+                <li>l'identifiant se lit à la main — et si <code>split()</code> ne rend pas un nombre ?</li>
+                <li>qu'arrive-t-il le jour où l'on ajoute <code>/produits/nouveautes/</code> ?</li>
+                <li>comment fabriquer l'URL du produit 12 <em>dans l'autre sens</em>, pour un lien ?</li>
+                <li>et comment savoir, sans lancer le serveur, quel <code>elif</code> répond à quoi ?</li>
+              </ul>
+            </div>
+          </div>
+          <aside class="notes">
+            Reprend exactement le serveur du temps 1 : c'est le même code, à qui on demande
+            simplement de servir deux pages au lieu d'une. Poser les quatre questions et ne
+            répondre à AUCUNE — la deuxième est celle que la simulation fait construire, la
+            troisième arrive aux frames.
+
+            La salle propose souvent un dictionnaire {chemin: fonction}. Bonne intuition, et
+            elle tombe dès qu'un chemin contient une partie variable : c'est justement le
+            passage du dictionnaire à la liste ordonnée qui est en jeu.
+          </aside>
+        </section>
+
+        <section>
+          <h2>Écrire une route</h2>
+          <pre><code class="language-python" data-trim data-noescape>from django.urls import path
+from . import views
+
+urlpatterns = [
+    path("produits/", views.liste, name="produit-liste"),
+    path("produits/&lt;int:pk&gt;/", views.detail, name="produit-detail"),
+]</code></pre>
+          <div class="cols cols-3">
+            <div class="card"><h4>le motif</h4><code>"produits/&lt;int:pk&gt;/"</code> — comparé au chemin, jamais au reste de l'URL.</div>
+            <div class="card"><h4>la vue</h4>La fonction appelée si le motif correspond.</div>
+            <div class="card"><h4>le nom</h4><code>name=</code> — pour fabriquer l'URL dans l'autre sens.</div>
+          </div>
+          <aside class="notes">
+            Slide de SYNTAXE. Les convertisseurs disponibles et l'effet de l'ordre ne sont PAS
+            donnés ici : c'est la simulation puis les frames qui les font découvrir.
+          </aside>
+        </section>
+
+        <section class="widget-slide" data-widget="routeurOrdre">
+          <h2>🔬 Le routeur essaie dans l'ordre</h2>
+          <div data-widget-mount></div>
+          <aside class="notes">
+            SIMULATION. L'ordre par défaut est VOLONTAIREMENT fautif : <code>&lt;slug:slug&gt;</code>
+            est placé avant <code>&lt;int:pk&gt;</code>. On part donc d'un bug à diagnostiquer,
+            pas d'un exemple correct à admirer. Déroulé conseillé :
+
+            1. Demander <code>/produits/12/</code>. Faire PRÉDIRE quelle vue répond. La salle dit
+               « ProduitDetail ». Lancer : c'est <code>ProduitParSlug</code> qui a mordu, parce que
+               « 12 » est aussi un slug valide. Le relevé montre <code>pk</code> absent et
+               <code>slug="12"</code>, une chaîne.
+            2. Faire chercher la correction. Permuter les deux motifs, relancer : cette fois
+               <code>pk=12 (int)</code>. Et <code>/produits/clavier-mecanique/</code> marche
+               toujours — l'ordre inverse ne casse rien, il n'était juste pas là.
+            3. Remettre l'ordre fautif et faire remarquer le motif marqué « jamais essayé » :
+               c'est ça, une route inatteignable. Aucune erreur, aucun message.
+            4. Demander <code>/produits/12</code> (sans slash) : aucun motif ne correspond, mais
+               le chemin + « / » en trouve un → 301, et la liste est parcourue DEUX fois.
+               Basculer <code>APPEND_SLASH</code> à False : 404. C'est le réglage, pas une loi.
+            5. Demander <code>/produits/abc/</code> : 404, et surtout — aucune vue appelée.
+
+            Le compteur « motifs essayés » est le coût du domaine : c'est exactement la liste que
+            Django affiche sur sa page jaune de debug.
+          </aside>
+        </section>
+
+        <section class="widget-slide" data-widget="routageFrames">
+          <h2>🎮 Le routage, règle par règle</h2>
+          <div data-widget-mount></div>
+          <aside class="notes">
+            Après la simulation : on a observé, on construit maintenant les règles. Six frames,
+            dont deux qui portent sur ce qui vient d'être vu à l'écran (le type de pk, l'ordre
+            des motifs) et une qui ouvre sur le temps 1 du TP.
+
+            La frame « le slash final » est la plus utile de la série : elle porte sur un bug
+            qui n'existe PAS sur le poste du développeur. Prendre le temps du debrief.
+          </aside>
+        </section>
+
+        <section>
+          <h2>Récapitulatif — les convertisseurs</h2>
+          <table style="font-size:0.6em; width:100%; border-collapse:collapse">
+            <tr>
+              <th style="text-align:left; color:var(--accent)">Convertisseur</th>
+              <th style="text-align:left; color:var(--accent)">Accepte</th>
+              <th style="text-align:left; color:var(--accent)">Type reçu par la vue</th>
+            </tr>
+            <tr><td><code>str</code> <small>(par défaut)</small></td><td>tout sauf <code>/</code></td><td><code>str</code></td></tr>
+            <tr><td><code>int</code></td><td>chiffres</td><td><code>int</code></td></tr>
+            <tr><td><code>slug</code></td><td>lettres, chiffres, <code>-</code>, <code>_</code></td><td><code>str</code></td></tr>
+            <tr><td><code>uuid</code></td><td>un UUID canonique</td><td><code>UUID</code></td></tr>
+            <tr><td><code>path</code></td><td>tout, <b>slash compris</b></td><td><code>str</code></td></tr>
+          </table>
+          <p><small>On peut écrire les siens
+            (<code>register_converter</code>) — utile pour une date, un code postal, une
+            référence produit maison.</small></p>
+          <aside class="notes">
+            Slide de RÉFÉRENCE, après les frames : le tableau est la réponse de la frame « le
+            type de pk ». Le projeter avant reviendrait à donner le corrigé.
+          </aside>
+        </section>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- PARTIE 3 — LES VUES -->
+      <!-- ============================================================ -->
+      <section>
+        <section class="section-slide">
+          <div class="part-number">3</div>
+          <h1>Les vues</h1>
+          <p class="subtitle">L'objet demandé n'existe pas. Que renvoie-t-on ?</p>
+          <aside class="notes">
+            Le problème à poser : le cas nominal est facile — on lit l'objet, on le renvoie. Tout le métier est dans les autres cas. Demander ce que doit faire le code quand le produit 12 a été supprimé la veille, et ce que le client doit recevoir. Les trois réponses possibles ne produisent pas le même code d'état, et c'est ça l'enjeu.
+          </aside>
+        </section>
+
+        <section>
+          <h2>La signature, et rien d'autre</h2>
+          <pre><code class="language-python" data-trim data-noescape>def detail(request, pk):
+    produit = ...                       # récupérer
+    return JsonResponse({"nom": produit.nom})   # répondre</code></pre>
+          <p>
+            Le premier paramètre est toujours la <span class="hl">requête</span>. Les suivants
+            viennent des morceaux nommés du motif d'URL — <code>pk</code> arrive parce que la
+            route déclare <code>&lt;int:pk&gt;</code>.
+          </p>
+          <p><small>Tout le reste — comment récupérer, quoi renvoyer quand ça échoue — est
+            l'objet des frames suivantes.</small></p>
+          <aside class="notes">
+            Slide de SYNTAXE. Surtout ne pas enchaîner sur get_object_or_404 ici : c'est la
+            réponse de la frame 2.
+          </aside>
+        </section>
+
+        <section class="widget-slide" data-widget="vuesFrames">
+          <h2>🎮 Récupérer un objet — et le bon code d'état</h2>
+          <div data-widget-mount></div>
+          <aside class="notes">
+            Six frames. La plus utile est « attraper trop large » : c'est une faute qu'on voit
+            dans presque tous les premiers projets, et qui rend les vrais bugs invisibles.
+
+            Debrief à faire à voix haute : les trois premières frames donnent 500, 404, 500.
+            Faire remarquer que le MÊME besoin métier produit trois codes différents selon la
+            ligne écrite — et que deux de ces trois codes mentent sur la responsabilité.
+          </aside>
+        </section>
+
+        <section>
+          <h2>Récapitulatif — trois façons, trois codes</h2>
+          <table style="font-size:0.6em; width:100%; border-collapse:collapse">
+            <tr>
+              <th style="text-align:left; color:var(--accent)">Écriture</th>
+              <th style="text-align:left; color:var(--accent)">Si l'objet manque</th>
+              <th style="text-align:left; color:var(--accent)">Ce que voit le client</th>
+            </tr>
+            <tr><td><code>objects.get(pk=pk)</code></td><td>lève <code>DoesNotExist</code></td><td><b>500</b> — « c'est ma faute », ce qui est faux</td></tr>
+            <tr><td><code>get_object_or_404(Produit, pk=pk)</code></td><td>lève <code>Http404</code></td><td><b>404</b> — honnête</td></tr>
+            <tr><td><code>filter(pk=pk).first()</code></td><td>renvoie <code>None</code></td><td>ce que <em>vous</em> en faites — sans garde, <b>500</b></td></tr>
+          </table>
+          <p><small>Règle : attrapez l'exception
+            <em>précise</em>. Un <code>except Exception</code> transforme une panne de base en
+            404 tranquille, et vous ne la verrez jamais passer.</small></p>
+          <aside class="notes">
+            Slide de RÉFÉRENCE, après les frames : ce tableau est le corrigé des trois premières.
+          </aside>
+        </section>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- PARTIE 4 — MODÈLES ET ORM -->
+      <!-- ============================================================ -->
+      <section>
+        <section class="section-slide">
+          <div class="part-number">4</div>
+          <h1>Modèles et ORM</h1>
+          <p class="subtitle">Du SQL que personne n'écrit, et que personne ne voit partir</p>
+          <aside class="notes">
+            Le problème à poser : ne pas écrire de SQL est confortable, mais le SQL part quand même. Personne ne le voit, personne ne le compte — et une page qui répond en 30 ms sur le poste du développeur peut en prendre 3 000 en production, pour la même ligne de code. Demander comment on saurait.
+          </aside>
+        </section>
+
+        <section>
+          <h2>Un modèle</h2>
+          <pre><code class="language-python" data-trim data-noescape>class Categorie(models.Model):
+    nom = models.CharField(max_length=60)
+
+class Produit(models.Model):
+    nom = models.CharField(max_length=120)
+    prix = models.DecimalField(max_digits=8, decimal_places=2)
+    stock = models.PositiveIntegerField(default=0)
+    categorie = models.ForeignKey(Categorie, on_delete=models.CASCADE,
+                                  related_name="produits")</code></pre>
+          <p><small>Une classe = une table, un attribut = une colonne, une
+            <code>ForeignKey</code> = une colonne <code>categorie_id</code> et une contrainte.
+            <code>makemigrations</code> écrit le SQL, <code>migrate</code> l'applique.</small></p>
+          <aside class="notes">
+            Slide de VOCABULAIRE. Le décor sert aux frames qui suivent : 8 produits, une clé
+            étrangère vers la catégorie, une relation inverse `avis`.
+          </aside>
+        </section>
+
+        <section class="widget-slide" data-widget="ormFrames">
+          <h2>🎮 Compter les requêtes avant de les mesurer</h2>
+          <div data-widget-mount></div>
+          <aside class="notes">
+            Six frames de PRÉDICTION. Faire écrire les nombres avant de valider — au temps 3
+            du TP, les étudiants les compteront pour de vrai avec CaptureQueriesContext, et
+            l'écart entre ce qu'ils ont prédit ici et ce qu'ils mesureront là-bas est tout
+            l'intérêt de l'exercice.
+
+            La frame « select_related ou prefetch_related » est celle où le plus de monde se
+            trompe : beaucoup prédisent 1 requête pour prefetch_related. Insister — ce sont
+            deux stratégies imposées par la cardinalité, pas deux niveaux d'optimisation.
+          </aside>
+        </section>
+
+        <section>
+          <h2>Récapitulatif — les deux compteurs qui comptent</h2>
+          <div class="cols cols-2">
+            <div class="card">
+              <h4>Nombre de requêtes</h4>
+              Se transporte partout : vrai sur votre portable comme en production.
+              <code>select_related</code> → 1 · <code>prefetch_related</code> → 2 ·
+              rien du tout → N+1.
+            </div>
+            <div class="card">
+              <h4>Nombre de lignes ramenées</h4>
+              Ce que le compteur de requêtes ne montre pas. Filtrer en Python ou en base
+              donne <em>une</em> requête dans les deux cas — mais 12 000 lignes contre 40.
+            </div>
+          </div>
+          <blockquote>
+            Les millisecondes, elles, ne se transportent pas : sur SQLite en mémoire, toutes
+            les durées valent <code>0.000 s</code>. Mesurez ce qui reste vrai ailleurs.
+          </blockquote>
+          <aside class="notes">
+            Slide de RÉFÉRENCE. Reprend explicitement la règle du TP Postgres : distinguer ce
+            qui se transporte d'une machine à l'autre de ce qui ne se transporte pas.
+          </aside>
+        </section>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- PARTIE 5 — L'ADMINISTRATION -->
+      <!-- ============================================================ -->
+      <section>
+        <section class="section-slide">
+          <div class="part-number">5</div>
+          <h1>L'administration</h1>
+          <p class="subtitle">Saisir et corriger des données avant qu'aucune interface n'existe</p>
+          <aside class="notes">
+            Le problème à poser : le premier jour d'un projet, il n'y a pas de front, pas de formulaire, et pourtant il faut des données pour travailler — et quelqu'un pour corriger celles qui sont fausses. Demander ce qu'on fait en attendant. La réponse habituelle est « des INSERT à la main », et elle ne passe pas l'échelle.
+          </aside>
+        </section>
+
+        <section>
+          <h2>Démonstration</h2>
+          <pre><code class="language-python" data-trim data-noescape># admin.py
+from django.contrib import admin
+from .models import Produit, Categorie
+
+admin.site.register(Produit)
+admin.site.register(Categorie)</code></pre>
+          <p>
+            Puis <code>python manage.py createsuperuser</code>, et
+            <code>/admin/</code> est en ligne : liste, recherche, création, modification,
+            suppression, gestion des droits.
+          </p>
+          <blockquote>
+            L'admin n'est <span class="hl">pas</span> votre API. C'est un outil interne, pour
+            vous et vos collègues. Il ne se personnalise que jusqu'à un certain point — au-delà,
+            on écrit une vraie interface.
+          </blockquote>
+          <aside class="notes">
+            DÉMONSTRATION EN DIRECT, rien à construire ici — l'opération mentale est « suivre une
+            procédure », donc ni jeu ni frame (contrat de design §2).
+
+            Déroulé : register, createsuperuser, se connecter, créer deux catégories et trois
+            produits — ces données serviront au TP de l'après-midi. Montrer au passage que
+            `__str__` sur le modèle change tout l'affichage, et que `list_display` est le
+            premier réglage utile.
+
+            Ne pas y passer plus de dix minutes : c'est confortable, ce n'est pas le sujet du
+            cours.
+          </aside>
+        </section>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- SYNTHÈSE -->
+      <!-- ============================================================ -->
+      <section>
+        <section>
+          <h2>Ce qu'il faut retenir</h2>
+          <div class="cols cols-2">
+            <div class="card">
+              <h4>La chaîne est ordonnée</h4>
+              <code>MIDDLEWARE</code> et <code>urlpatterns</code> sont des <b>listes</b>.
+              Déplacer une ligne change le comportement — sans erreur, sans message.
+            </div>
+            <div class="card">
+              <h4>Le code d'état est une décision</h4>
+              500, 404 ou 200 selon la ligne écrite. Deux de ces trois codes peuvent mentir
+              sur la responsabilité.
+            </div>
+            <div class="card" style="margin-top:0.4em">
+              <h4>L'ORM est paresseux</h4>
+              Rien ne part en base tant que personne ne parcourt le QuerySet. Et l'ORM ne
+              devine jamais ce dont vous aurez besoin ensuite.
+            </div>
+            <div class="card" style="margin-top:0.4em">
+              <h4>Ce qui se compte se corrige</h4>
+              Le nombre de requêtes et le nombre de lignes ramenées : deux compteurs, deux
+              pannes différentes.
+            </div>
+          </div>
+          <aside class="notes">
+            ENCHAÎNEMENT (à dire, pas à projeter) — le TP d'instrumentation reprend chacun de
+            ces points sur un vrai Django : temps 1 pour resolve, le fragment, %20 et le 301
+            du slash manquant ; temps 2 pour écrire soi-même le middleware que la simulation a
+            montré ; temps 3 pour compter les requêtes qu'ils viennent de prédire.
+
+            Faire noter les prédictions AVANT le TP, noir sur blanc. C'est la consigne la plus
+            importante du dispositif : un résultat lu sans avoir parié ne s'apprend pas.
+
+            Le module III enchaîne sur DRF — sérialiseur, ModelViewSet, routeur. Tout ce qui
+            vient d'être vu y reste vrai : même chaîne, deux couches de plus.
+          </aside>
+        </section>
+
+      </section>
+
+    </div>
+  </div>
+
+  <script src="../js/theme.js"></script>
+  <script src="../js/pi-frames.js"></script>
+  <script src="js/widgets/middlewares-aller-retour.js"></script>
+  <script src="js/widgets/routeur-ordre.js"></script>
+  <script src="js/widgets/routage-frames.js"></script>
+  <script src="js/widgets/vues-frames.js"></script>
+  <script src="js/widgets/orm-frames.js"></script>
+
+  <script src="../vendor/reveal/dist/reveal.js"></script>
+  <script src="../vendor/reveal/plugin/highlight/highlight.js"></script>
+  <script src="../vendor/reveal/plugin/notes/notes.js"></script>
+  <script src="../vendor/mermaid/mermaid.min.js"></script>
+
+  <script src="../js/init.js"></script>
+</body>
+</html>

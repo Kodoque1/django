@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>APIs Python / Django RESTful — IPSSI</title>
+  <!-- Favicon en ligne : évite un 404 sur chaque chargement, et rend l'onglet
+       reconnaissable quand deck et accueil sont ouverts côte à côte en salle. -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="css/theme-ipssi.css" />
+  <style>
+    /* Page d'accueil — hors reveal.js. On ne reprend de `theme-ipssi.css` que ses
+       variables (:root) et le style du bouton #theme-toggle ; tout le reste est ici,
+       le fichier étant écrit pour un deck. */
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 2.5rem 1.25rem 4rem;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.55;
+    }
+
+    .enveloppe { max-width: 62rem; margin: 0 auto; }
+
+    header { border-bottom: 2px solid var(--card-border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+    h1 { font-size: clamp(1.5rem, 4vw, 2.1rem); margin: 0 0 .35rem; color: var(--accent); letter-spacing: -.01em; }
+    .sous-titre { color: var(--fg-muted); margin: 0; font-size: .95rem; }
+
+    h2 { font-size: 1.15rem; margin: 2.5rem 0 .9rem; }
+
+    .jours { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr)); }
+
+    .jour {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: .7rem;
+      padding: 1.1rem 1.2rem 1.2rem;
+      display: flex;
+      flex-direction: column;
+    }
+    .jour > h3 { margin: 0 0 .15rem; font-size: 1rem; color: var(--accent); }
+    .jour > .prog { margin: 0 0 .85rem; font-size: .8rem; color: var(--fg-muted); }
+
+    ul.items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .5rem; }
+    ul.items li { display: flex; gap: .55rem; align-items: baseline; font-size: .87rem; }
+    .puce { flex: 0 0 auto; width: 1.15rem; text-align: center; font-size: .8rem; }
+
+    /* Ce qui n'existe pas encore reste lisible mais visiblement en retrait : la page doit
+       dire l'état réel du cours, pas donner l'illusion que tout est prêt. */
+    li.attente { color: var(--fg-muted); }
+    li.attente .titre { text-decoration: none; }
+    .duree { color: var(--fg-muted); font-size: .8rem; white-space: nowrap; }
+
+    a { color: var(--link); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+    a:hover { text-decoration-thickness: 2px; }
+
+    code {
+      background: var(--code-bg);
+      border: 1px solid var(--code-border);
+      border-radius: .3rem;
+      padding: .05rem .3rem;
+      font-size: .84em;
+      word-break: break-word;
+    }
+
+    .docs { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); }
+    .doc {
+      border: 1px solid var(--card-border);
+      border-left: 3px solid var(--accent);
+      border-radius: .5rem;
+      padding: .7rem .9rem;
+      background: var(--card-bg);
+      font-size: .87rem;
+    }
+    .doc b { display: block; margin-bottom: .15rem; }
+    .doc span { color: var(--fg-muted); }
+
+    .legende { font-size: .82rem; color: var(--fg-muted); margin: .8rem 0 0; }
+    .legende b { color: var(--fg); font-weight: 600; }
+
+    footer {
+      margin-top: 3rem; padding-top: 1.25rem;
+      border-top: 1px solid var(--card-border);
+      font-size: .85rem; color: var(--fg-muted);
+    }
+    footer pre {
+      background: var(--code-bg); border: 1px solid var(--code-border);
+      border-radius: .5rem; padding: .7rem .9rem; overflow-x: auto; font-size: .82rem;
+      color: var(--fg);
+    }
+  </style>
+</head>
+<body>
+  <div class="enveloppe">
+    <header>
+      <h1>APIs Python — Django RESTful Web Services</h1>
+      <p class="sous-titre">Mastère Dév, Data &amp; IA — 4ᵉ année, IPSSI · une semaine, cinq jours</p>
+    </header>
+
+    <div class="jours">
+
+      <section class="jour">
+        <h3>Jour 1 — Architecture RESTful</h3>
+        <p class="prog">Programme I (Web, URL, protocoles, verbes, codes) et II (Django)</p>
+        <ul class="items">
+          <li><span class="puce">✅</span>
+            <span><a class="titre" href="J1-01-architecture-restful/">Module I — Architecture RESTful</a>
+              — deck + 5 jeux + 1 simulation <span class="duree">≈ 55 min</span></span></li>
+          <li><span class="puce">✅</span>
+            <span><a class="titre" href="J1-02-architecture-django/">Module II — Architecture applicative Django</a>
+              — 2 simulations + 18 frames <span class="duree">≈ 1 h 10</span></span></li>
+          <li class="attente"><span class="puce">⏳</span>
+            <span><span class="titre">Jeu A — L'atelier de la requête</span>, niveaux 1-5
+              <span class="duree">≈ 30 min</span> · spécifié</span></li>
+          <li class="attente"><span class="puce">⏳</span>
+            <span><span class="titre">Jeu E — La console REST</span>
+              <span class="duree">≈ 20 min</span> · spécifié</span></li>
+          <li><span class="puce">▢</span>
+            <span>TP fiche : <i>préparation de l'environnement</i> · rappel Python 3</span></li>
+        </ul>
+      </section>
+
+      <section class="jour">
+        <h3>Jour 2 — Django REST Framework</h3>
+        <p class="prog">Programme III (configuration, sérialiseurs, vues, consommation)</p>
+        <ul class="items">
+          <li class="attente"><span class="puce">⏳</span>
+            <span><span class="titre">Module III — Django REST Framework</span>
+              — deck à écrire</span></li>
+          <li class="attente"><span class="puce">⏳</span>
+            <span><span class="titre">Jeu A</span>, niveaux 6-7 — les migrations
+              <span class="duree">≈ 20 min</span></span></li>
+          <li class="attente"><span class="puce">⏳</span>
+            <span><span class="titre">Jeu C — Le banc d'essai</span>
+              <span class="duree">≈ 35 min</span> · spécifié</span></li>
+          <li><span class="puce">✅</span>
+            <span>TP d'instrumentation, <b>temps 1</b> (URL et routage) et <b>temps 2</b>
+              (middlewares) <span class="duree">≈ 1 h 40</span></span></li>
+          <li><span class="puce">▢</span>
+            <span>TP fiche : <i>premier projet Django</i> · test de l'API avec Postman</span></li>
+        </ul>
+      </section>
+
+      <section class="jour">
+        <h3>Jour 3 — Projet guidé full stack</h3>
+        <p class="prog">Création de l'API et consommation</p>
+        <ul class="items">
+          <li><span class="puce">✅</span>
+            <span>TP d'instrumentation, <b>temps 3</b> — l'ORM, le N+1, l'exercice des logs
+              <span class="duree">≈ 1 h</span></span></li>
+          <li><span class="puce">✅</span>
+            <span>TP d'instrumentation, <b>temps 5</b> — django-debug-toolbar, <i>pendant</i> le
+              projet <span class="duree">≈ 30 min</span></span></li>
+          <li><span class="puce">▢</span>
+            <span>TP fiche : <i>application complète full stack</i></span></li>
+        </ul>
+        <p class="legende">⚠️ Journée la plus chargée : le temps 5 se joue <b>dans</b> le projet,
+          pas en bloc.</p>
+      </section>
+
+      <section class="jour">
+        <h3>Jour 4 — Autorisations &amp; authentification</h3>
+        <p class="prog">Programme IV et V · évaluation</p>
+        <ul class="items">
+          <li class="attente"><span class="puce">⏳</span>
+            <span><span class="titre">Modules IV et V</span> — decks à écrire</span></li>
+          <li class="attente"><span class="puce">⏳</span>
+            <span><span class="titre">Jeu D — Le casse</span>
+              <span class="duree">≈ 40 min</span> · spécifié</span></li>
+          <li class="attente"><span class="puce">⏳</span>
+            <span><span class="titre">F′ — Simulateur d'authentification</span>
+              <span class="duree">≈ 15 min</span> · spécifié</span></li>
+          <li><span class="puce">✅</span>
+            <span>TP d'instrumentation, <b>temps 4</b> — DRF : verbes, validation, 401 contre 403
+              <span class="duree">≈ 1 h 10</span></span></li>
+          <li><span class="puce">▢</span>
+            <span>TP fiche : <i>application sécurisée</i> · QCM + TP individuel</span></li>
+        </ul>
+      </section>
+
+      <section class="jour">
+        <h3>Jour 5 — Projet</h3>
+        <p class="prog">Projet complet en monôme</p>
+        <ul class="items">
+          <li><span class="puce">▢</span>
+            <span>Modèle, API, application cliente, sécurisation des accès</span></li>
+        </ul>
+        <p class="legende">Aucun dispositif interactif, et c'est voulu : le projet est le régime
+          « livrer ».</p>
+      </section>
+
+    </div>
+
+    <p class="legende">
+      <b>✅</b> disponible · <b>🔨</b> en cours, jouable · <b>⏳</b> spécifié, pas encore écrit ·
+      <b>▢</b> TP ou séance de la fiche IPSSI, hors dispositifs interactifs.
+    </p>
+
+    <h2>Les documents</h2>
+    <div class="docs">
+      <div class="doc"><b><code>README.md</code></b>
+        <span>Le pilotage : matrice programme × dispositif × statut, les trois régimes,
+          le calendrier consolidé.</span></div>
+      <div class="doc"><b><code>tp-instrumentation/FICHE-TP.md</code></b>
+        <span>Le TP en cinq temps. Corrigé enseignant dans <code>CORRIGE.md</code> —
+          à ne pas distribuer avant la séance.</span></div>
+      <div class="doc"><b><code>design/jeux/</code></b>
+        <span>Contrat de design, noyau <code>django-lite</code>, et les cinq jeux
+          spécifiés (A, C, D, E, F′).</span></div>
+      <div class="doc"><b><code>outils/</code></b>
+        <span>Les trois bancs de vérification, lancés d'un seul coup par
+          <code>verifier-tout.sh</code>.</span></div>
+    </div>
+
+    <footer>
+      <p>Servir ce dossier <b>sans cache</b> — sinon un F5 rejoue d'anciens fichiers JS :</p>
+      <pre>cd ~/Documents/ipssi/django &amp;&amp; python3 serve.py</pre>
+      <p>Puis <code>http://localhost:8000/cours/</code>. Dans un jeu : les touches
+        <b>1-9</b> sélectionnent une réponse, <b>Entrée</b> valide. Dans le deck :
+        <b>Échap</b> pour la vue d'ensemble, <b>S</b> pour les notes orateur.</p>
+    </footer>
+  </div>
+
+  <script src="js/theme.js"></script>
+  <script>CourseTheme.init();</script>
+</body>
+</html>

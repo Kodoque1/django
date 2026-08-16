@@ -1,0 +1,640 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Architecture RESTful — Jour 1</title>
+
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="../vendor/reveal/dist/reveal.css" />
+  <link rel="stylesheet" href="../vendor/reveal/dist/theme/black.css" id="reveal-theme" />
+  <link rel="stylesheet" href="../vendor/reveal/plugin/highlight/monokai.css" />
+  <link rel="stylesheet" href="../css/theme-ipssi.css" />
+  <link rel="stylesheet" href="../css/widgets.css" />
+  <link rel="stylesheet" href="../css/pi-frames.css" />
+  <link rel="stylesheet" href="../css/jeux.css" />
+  <link rel="stylesheet" href="../css/simulations.css" />
+</head>
+<body>
+  <div class="reveal">
+    <div class="slides">
+
+      <!-- ============================================================ -->
+      <!-- TITRE -->
+      <!-- ============================================================ -->
+      <section class="title-slide">
+        <div class="kicker">Mastère Dév, Data &amp; IA — 4ᵉ année · IPSSI</div>
+        <h1>Architecture RESTful</h1>
+        <p class="subtitle">
+          Jour 1 — le socle du Web, avant d'écrire la première ligne de Django
+        </p>
+        <div class="modules-badge">
+          <span class="badge">Web mondial</span>
+          <span class="badge">URL</span>
+          <span class="badge">TCP/IP</span>
+          <span class="badge">Verbes HTTP</span>
+          <span class="badge">Codes d'état</span>
+        </div>
+        <aside class="notes">
+          Cinq notions, cinq mini-jeux. Le principe de la journée : on ne valide jamais une
+          notion sur un hochement de tête, mais sur une réponse construite et corrigée
+          immédiatement. Prévoir 4 à 6 min par jeu, en solo au poste, puis 2 min de debrief.
+
+          OBJECTIFS (pour vous, pas à projeter) — à l'issue de la journée, l'étudiant doit
+          savoir : distinguer Internet du Web et nommer les trois inventions du CERN ·
+          découper une URL en six parties et dire laquelle ne voyage pas · situer HTTP, TCP,
+          IP et Ethernet dans la pile · choisir le verbe juste à partir d'une intention, et
+          raisonner en sûreté / idempotence · renvoyer le code d'état exact et lire un code
+          reçu comme un diagnostic.
+
+          Le fil : tout ceci est le vocabulaire de DRF. Une vue DRF ne fait rien d'autre que
+          lire une URL, reconnaître un verbe et renvoyer un code.
+        </aside>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- PARTIE 1 — WEB MONDIAL -->
+      <!-- ============================================================ -->
+      <section>
+        <section class="section-slide">
+          <div class="part-number">1</div>
+          <h1>Web mondial</h1>
+          <p class="subtitle">Ce que Tim Berners-Lee a ajouté à un réseau qui existait déjà</p>
+        </section>
+
+
+
+        <section class="widget-slide" data-widget="webInvention">
+          <h2>🎮 Les trois inventions du Web</h2>
+          <div data-widget-mount></div>
+          <aside class="notes">
+            Insister sur la consigne : on PRÉDIT avant de voir. La prédiction engage — c'est
+            elle qui rend la correction efficace. Laisser 4 à 5 min, puis demander à voix haute
+            qui a raté la frame « Internet vs Web » : c'est la plus discriminante du lot.
+          </aside>
+        </section>
+
+        <section>
+          <h2>Trois inventions, trois verbes</h2>
+          <div class="cols cols-3">
+            <div class="card">
+              <h4>URL — <em>nommer</em></h4>
+              Un nom unique et universel pour une ressource : le protocole, la machine et le
+              chemin, en un seul texte.
+            </div>
+            <div class="card">
+              <h4>HTTP — <em>demander</em></h4>
+              Une grammaire commune pour réclamer et répondre : un verbe, un chemin, des
+              en-têtes, un code de retour.
+            </div>
+            <div class="card">
+              <h4>HTML — <em>relier</em></h4>
+              Le format du document, et surtout l'<span class="hl">hyperlien</span> qui le
+              rattache aux autres.
+            </div>
+          </div>
+          <aside class="notes">
+            La matière de référence, après le jeu qui l'a fait construire. C'est le moment de la
+            noter : les trois noms et les trois verbes servent de charpente à toute la journée.
+          </aside>
+        </section>
+
+        <section>
+          <h2>Récapitulatif — Internet n'est pas le Web</h2>
+          <div class="cols cols-narrow-wide">
+            <div>
+              <div class="card">
+                <h4>Internet — depuis 1970</h4>
+                Un réseau de réseaux, et les protocoles qui l'animent. Il transporte
+                <em>plusieurs</em> services : courriel, transfert de fichiers, DNS, visioconférence.
+              </div>
+              <div class="card" style="margin-top:0.5em">
+                <h4>Le Web — 1989, CERN</h4>
+                <em>Un</em> de ces services. Sa nouveauté n'est pas de transporter des documents,
+                mais de les <span class="hl">relier</span>.
+              </div>
+            </div>
+            <div class="mermaid-wrap">
+              <pre class="mermaid">
+flowchart TB
+  subgraph NET["Internet — le réseau"]
+    direction LR
+    W["Web<br/>HTTP"]
+    M["Courriel<br/>SMTP"]
+    F["Fichiers<br/>FTP"]
+    D["Annuaire<br/>DNS"]
+  end
+  NET --- C["Câbles, fibres, Wi-Fi"]
+              </pre>
+            </div>
+          </div>
+          <aside class="notes">
+            Question à poser avant d'afficher : « le mail, c'est du Web ? ». La confusion est
+            quasi universelle, et elle a une conséquence directe : on croit que « faire une
+            API web » impose un navigateur. Non — HTTP se parle très bien entre serveurs.
+          </aside>
+        </section>
+
+        <section>
+          <h2>Récapitulatif — un échange asymétrique</h2>
+          <div class="mermaid-wrap">
+            <pre class="mermaid">
+sequenceDiagram
+  participant N as Navigateur
+  participant S as Serveur
+  N->>S: GET /produits/
+  S-->>N: 200 OK + HTML
+  Note over N,S: la connexion se referme,<br/>le serveur ne garde rien
+  N->>S: GET /produits/12/
+  S-->>N: 200 OK + HTML
+            </pre>
+          </div>
+          <p>
+            Le serveur ne parle <span class="hl">jamais</span> le premier, et ne se souvient de rien
+            entre deux requêtes. Ce caractère <strong>sans état</strong> deviendra un principe de REST —
+            et la raison pour laquelle chaque appel devra porter lui-même son jeton.
+          </p>
+          <aside class="notes">
+            Réponse de la frame « qui engage l'échange ». Enchaîner : le caractère sans état est ce qui obligera chaque appel à porter son propre jeton, au Jour 4.
+          </aside>
+        </section>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- PARTIE 2 — URL -->
+      <!-- ============================================================ -->
+      <section>
+        <section class="section-slide">
+          <div class="part-number">2</div>
+          <h1>URL</h1>
+          <p class="subtitle">Retrouver un document sans savoir sur quelle machine il se trouve</p>
+          <aside class="notes">
+            Le problème à poser : on veut citer un document dans un courriel, et que le destinataire le retrouve — sur une machine qu'il ne connaît pas, avec un logiciel qui n'est pas le nôtre. Demander ce qu'il faut mettre dans ce texte pour que ça marche. Recueillir deux ou trois propositions au tableau avant d'enchaîner.
+          </aside>
+        </section>
+
+
+
+        <section class="widget-slide" data-widget="urlAnatomy">
+          <h2>🎮 Anatomie d'une URL</h2>
+          <div data-widget-mount></div>
+          <aside class="notes">
+            Le jeu le plus long des cinq (9 frames). Il se termine sur le motif
+            <code>path("produits/&lt;int:pk&gt;/")</code> : c'est la charnière avec la partie II du
+            programme. Si une seule chose doit rester : le fragment ne part pas.
+          </aside>
+        </section>
+
+        <section>
+          <h2>Récapitulatif — anatomie d'une URL</h2>
+          <div class="reactive-doc" style="font-family:monospace; text-align:center; font-size:0.72em">
+            <span class="hl">https</span>://<span style="color:var(--ok)">boutique.ipssi.fr</span><span style="color:var(--warn)">:8000</span><span style="color:var(--accent-2)">/produits/12/</span><span style="color:var(--danger)">?tri=prix&amp;page=2</span><span style="color:var(--fg-muted)">#avis</span>
+          </div>
+          <div class="cols cols-3" style="margin-top:0.6em">
+            <div class="card"><h4>schéma · hôte</h4> Le protocole, puis la machine — que le DNS traduira en adresse IP.</div>
+            <div class="card"><h4>port · chemin</h4> L'application visée (implicite : 80 ou 443), puis la ressource. <strong>Seul le chemin</strong> est comparé à vos <code>path()</code>.</div>
+            <div class="card"><h4>requête · fragment</h4> Les paramètres (<code>request.GET</code>)… et l'ancre, qui <strong>ne quitte jamais le navigateur</strong>.</div>
+          </div>
+          <aside class="notes">
+            Le point qui surprend toujours : le fragment n'est pas transmis. Le démontrer en
+            direct si le temps le permet — onglet réseau, ouvrir une URL avec ancre, montrer la
+            ligne de requête.
+          </aside>
+          <aside class="notes">
+            Slide de RÉFÉRENCE, après le jeu : les six étiquettes sont la réponse de la frame « slots ». La projeter avant, c'est faire recopier au lieu de faire construire.
+          </aside>
+        </section>
+
+        <section>
+          <h2>Ce que le serveur reçoit vraiment</h2>
+          <pre><code class="language-http">GET /produits/12/?tri=prix&amp;page=2 HTTP/1.1
+Host: boutique.ipssi.fr
+Accept: application/json</code></pre>
+          <p>
+            Le schéma a servi à choisir le port et le chiffrement, l'hôte à trouver l'adresse IP,
+            le fragment est resté sur place. Ne partent que le <span class="hl">chemin</span>,
+            la <span class="hl">requête</span> et les en-têtes.
+          </p>
+          <blockquote>
+            Corollaire pratique : une valeur qu'une vue Django doit lire ne peut vivre que dans
+            le chemin (<code>&lt;int:pk&gt;</code>), la chaîne de requête (<code>request.GET</code>),
+            un en-tête, ou le corps. Jamais après un <code>#</code>.
+          </blockquote>
+          <aside class="notes">
+            À enchaîner juste après : le jeu a fait constater que le fragment ne part pas ; cette slide montre la requête brute qui le prouve, et sert de transition vers le temps 1 du TP, où l'étudiant le mesure lui-même.
+          </aside>
+        </section>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- PARTIE 3 — SUITE DE PROTOCOLES -->
+      <!-- ============================================================ -->
+      <section>
+        <section class="section-slide">
+          <div class="part-number">3</div>
+          <h1>Suite de protocole Internet</h1>
+          <p class="subtitle">Un réseau qui perd, mélange et coupe — et un message qui arrive entier</p>
+          <aside class="notes">
+            Le problème à poser : un câble ne garantit rien. Les paquets se perdent, arrivent dans le désordre, se font couper en morceaux par un routeur au milieu. Et pourtant une page arrive entière, dans l'ordre. Demander qui s'en charge — la réponse « le câble » ou « le serveur » est la plus fréquente, et elle est fausse dans les deux cas.
+          </aside>
+        </section>
+
+        <section>
+          <h2>Quatre couches, quatre questions</h2>
+          <div class="mermaid-wrap">
+            <pre class="mermaid">
+flowchart TB
+  A["<b>Application</b> — le message<br/>ce que le programme veut dire"] --> T
+  T["<b>Transport</b> — quelle application ?<br/>jusqu'à quel programme ?"] --> I
+  I["<b>Internet</b> — quelle machine ?<br/>routage mondial, de bout en bout"] --> R
+  R["<b>Accès réseau</b> — quelle carte ?<br/>le lien physique, de proche en proche"]
+            </pre>
+          </div>
+          <p><small>Une question par couche, et une seule.</small></p>
+          <aside class="notes">
+            Ne pas aller plus loin ici : l'indépendance des couches et sa conséquence (HTTP/3 sur
+            UDP sans réécrire le Web) sont ce que le jeu fait construire. La slide nomme les
+            quatre couches parce qu'on ne peut pas trier dans des cases sans nom — rien de plus.
+          </aside>
+        </section>
+
+
+        <section class="widget-slide" data-widget="tcpipStack">
+          <h2>🎮 Emballer, envoyer, déballer</h2>
+          <div data-widget-mount></div>
+          <aside class="notes">
+            La frame de tri des protocoles piège presque tout le monde sur le DNS (classé en
+            transport parce qu'il « utilise UDP »). C'est le moment de rappeler la règle :
+            « utilise » n'est pas « appartient à ».
+          </aside>
+        </section>
+
+        <section class="widget-slide" data-widget="traverseeReseau">
+          <h2>🔬 D'un hôte à l'autre</h2>
+          <div data-widget-mount></div>
+          <aside class="notes">
+            SIMULATION, après le jeu : celui-ci a fait construire l'emboîtement couche par couche
+            et l'ordre de déballage. Ici on montre ce qu'il ne pouvait pas — les deux hôtes, la
+            traversée, et le coût. Déroulé conseillé :
+
+            1. Laisser la charge par défaut (120 o) et envoyer. Faire remarquer que le cœur qui
+               arrive sur B a exactement la largeur de celui qui est parti de A.
+            2. Descendre le curseur à 1 octet et faire PRÉDIRE le surcoût avant d'envoyer.
+               Réponse : 59 octets sur le câble pour 1 octet utile, soit 98 %. C'est le moment
+               le plus frappant de la simulation.
+            3. Monter au-delà de 1460 : un second segment apparaît, sans qu'on ait parlé de
+               fragmentation. Faire chercher d'où vient ce seuil — 1500 − 20 (IP) − 20 (TCP).
+            4. Basculer en UDP et faire expliquer pourquoi le MSS gagne 12 octets.
+
+            Le trajet n'est pas un film : les étapes, le nombre de segments et les largeurs sont
+            recalculés à chaque envoi depuis les réglages courants.
+          </aside>
+        </section>
+
+        <section>
+          <h2>Récapitulatif — TCP, UDP, et où se branche HTTP</h2>
+          <div class="cols cols-2">
+            <div class="card ok">
+              <h4>TCP — fiable</h4>
+              Numérote, accuse réception, réémet ce qui manque, remet dans l'ordre.
+              Le prix : l'attente. <strong>HTTP/1.1 et HTTP/2</strong> roulent dessus.
+            </div>
+            <div class="card warn">
+              <h4>UDP — sans garantie</h4>
+              Envoie et oublie. Rapide, sans reprise. Voix, jeu, DNS…
+              et <strong>HTTP/3</strong>, qui rebâtit la fiabilité au-dessus, avec QUIC.
+            </div>
+          </div>
+          <blockquote>
+            Votre code Django ne voit rien de tout cela : entre la socket et votre vue, il y a un
+            serveur (Gunicorn) et une convention d'appel (WSGI/ASGI). Mais savoir <em>dans quelle
+            couche</em> un incident se produit fait gagner des heures de débogage.
+          </blockquote>
+          <aside class="notes">
+            Slide de RÉFÉRENCE, après le jeu : la frame « TCP ou UDP » fait éprouver la perte de
+            paquets avant qu'on nomme la propriété. On consolide ici, et on ouvre sur HTTP/3.
+          </aside>
+        </section>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- PARTIE 4 — VERBES HTTP -->
+      <!-- ============================================================ -->
+      <section>
+        <section class="section-slide">
+          <div class="part-number">4</div>
+          <h1>Verbes ou méthodes HTTP</h1>
+          <p class="subtitle">Une même adresse, et pourtant lire n'est pas supprimer</p>
+          <aside class="notes">
+            Le problème à poser : /produits/12/ désigne un produit. Consulter ce produit, le modifier et le supprimer visent tous les trois la même chose — mais ce ne sont pas les mêmes actes, et l'une des trois est irréversible. Demander comment on distingue, si l'adresse est la même. Ne pas répondre.
+          </aside>
+        </section>
+
+        <section>
+          <h2>2005 — le jour où un robot a vidé des bases</h2>
+          <blockquote>
+            Le <em>Web Accelerator</em> de Google préchargeait tous les liens des pages visitées,
+            pour les afficher instantanément. Des applications qui cachaient des suppressions
+            derrière de simples <code>&lt;a href&gt;</code> ont vu leurs données disparaître —
+            sans que personne n'ait cliqué.
+          </blockquote>
+          <p>
+            Le robot ne faisait que des <code>GET</code>, et n'a violé aucune règle.
+            <span class="hl">Alors qui est en tort ?</span>
+          </p>
+          <aside class="notes">
+            Ne pas répondre ici — c'est le jeu qui suit qui fait construire la réponse (les verbes
+            sûrs, puis la matrice sûr/idempotent). Recueillir deux ou trois hypothèses à voix
+            haute, les noter au tableau, y revenir après le jeu : celles qui étaient fausses sont
+            le meilleur moment du chapitre.
+          </aside>
+        </section>
+
+        <section class="widget-slide" data-widget="httpVerbs">
+          <h2>🎮 Le bon verbe</h2>
+          <div data-widget-mount></div>
+          <aside class="notes">
+            La table produits est réellement modifiée par les réponses validées. Deux moments
+            à faire remarquer à voix haute : la ligne mutilée par le PUT partiel, et les deux
+            lignes créées par le double POST. Ce sont les deux erreurs les plus fréquentes des
+            premiers projets DRF.
+          </aside>
+        </section>
+
+        <section>
+          <h2>Récapitulatif — CRUD ↔ verbes ↔ DRF</h2>
+          <table style="font-size:0.55em; width:100%; border-collapse:collapse">
+            <tr>
+              <th style="text-align:left; color:var(--accent)">Intention</th>
+              <th style="text-align:left; color:var(--accent)">Requête</th>
+              <th style="text-align:left; color:var(--accent)">Code usuel</th>
+              <th style="text-align:left; color:var(--accent)">Action <code>ModelViewSet</code></th>
+            </tr>
+            <tr><td>Lister</td><td><code>GET /produits/</code></td><td>200</td><td><code>list()</code></td></tr>
+            <tr><td>Consulter</td><td><code>GET /produits/12/</code></td><td>200</td><td><code>retrieve()</code></td></tr>
+            <tr><td>Créer</td><td><code>POST /produits/</code></td><td>201 + <code>Location</code></td><td><code>create()</code></td></tr>
+            <tr><td>Remplacer</td><td><code>PUT /produits/12/</code></td><td>200</td><td><code>update()</code></td></tr>
+            <tr><td>Modifier en partie</td><td><code>PATCH /produits/12/</code></td><td>200</td><td><code>partial_update()</code></td></tr>
+            <tr><td>Supprimer</td><td><code>DELETE /produits/12/</code></td><td>204</td><td><code>destroy()</code></td></tr>
+          </table>
+          <p><small>Le routeur DRF fait ce câblage automatiquement. Quand une API se comporte mal, c'est presque toujours dans ce tableau qu'est l'erreur.</small></p>
+          <aside class="notes">
+            Slide de RÉFÉRENCE, volontairement placée après le jeu : les trois premières
+            colonnes sont la réponse des frames. La projeter avant reviendrait à donner le
+            corrigé.
+
+            La quatrième colonne, elle, n'a été construite par personne — c'est un pont vers le
+            module III, à donner comme tel : voilà le nom que portera chacune de ces requêtes
+            quand on écrira l'API. Ne pas interroger dessus, ils n'ont encore vu aucun ViewSet.
+          </aside>
+        </section>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- PARTIE 5 — CODES D'ÉTAT -->
+      <!-- ============================================================ -->
+      <section>
+        <section class="section-slide">
+          <div class="part-number">5</div>
+          <h1>Codes d'état</h1>
+          <p class="subtitle">Un programme ne sait pas lire « produit introuvable »</p>
+          <aside class="notes">
+            Le problème à poser : un humain lit « produit introuvable » et comprend. Un programme, lui, doit décider s'il réessaie, s'il corrige sa demande ou s'il abandonne — et il ne sait pas lire le français. Demander ce qu'on lui donne pour trancher.
+          </aside>
+        </section>
+
+        <section class="widget-slide" data-widget="statusTriage">
+          <h2>🎮 Le triage</h2>
+          <div data-widget-mount></div>
+          <aside class="notes">
+            Déroulé conseillé : une manche solo au poste, puis « ⚔️ Mode duel » et une manche
+            projetée avec un volontaire au clavier, la classe annonçant le code à voix haute.
+            C'est la bascule qui fait apparaître le chrono — pas avant.
+          </aside>
+        </section>
+
+        <section>
+          <h2>Récapitulatif — le catalogue utile en API</h2>
+          <div class="cols cols-2">
+            <div>
+              <div class="card"><h4>Succès</h4>
+                <code>200</code> voici le résultat · <code>201</code> créé, voici son URL ·
+                <code>204</code> c'est fait, rien à renvoyer
+              </div>
+              <div class="card" style="margin-top:0.4em"><h4>Redirection</h4>
+                <code>301</code> permanent — <em>mis en cache durablement</em> ·
+                <code>302</code> temporaire
+              </div>
+            </div>
+            <div>
+              <div class="card"><h4>Client</h4>
+                <code>400</code> requête malformée · <code>401</code> qui êtes-vous ? ·
+                <code>403</code> je sais qui vous êtes, c'est non · <code>404</code> adresse inconnue
+              </div>
+              <div class="card" style="margin-top:0.4em"><h4>Serveur</h4>
+                <code>500</code> mon code a planté · <code>502</code> l'amont n'a rien répondu de valable ·
+                <code>503</code> je réponds, mais je suis indisponible
+              </div>
+            </div>
+          </div>
+          <p><small><strong>401 ou 403 ?</strong> Authentification contre autorisation — la confusion la plus fréquente.</small></p>
+          <aside class="notes">
+            Slide de RÉFÉRENCE, volontairement placée après le jeu : ce catalogue est l'indice de
+            la frame « les cinq familles ». Le projeter avant reviendrait à donner le corrigé.
+            Ici, il devient l'antisèche qu'on garde ouverte pendant les parties IV et V.
+          </aside>
+        </section>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- SYNTHÈSE -->
+      <!-- ============================================================ -->
+      <section>
+        <section class="widget-slide" data-widget="boucleComplete">
+          <h2>🎮 La boucle complète</h2>
+          <div data-widget-mount></div>
+          <aside class="notes">
+            Récapitulation : rien de neuf, tout a été construit dans les cinq parties. La frame
+            d'ordonnancement se joue bien à voix haute, un étudiant proposant l'échange suivant
+            et la classe validant. Les deux pièges habituels : placer la connexion TCP avant la
+            réponse du DNS, et croire que le DNS relaie la requête.
+          </aside>
+        </section>
+
+        <section>
+          <h2>La boucle complète</h2>
+          <div class="mermaid-wrap">
+            <pre class="mermaid">
+sequenceDiagram
+  participant C as Client
+  participant D as DNS
+  participant S as Serveur
+  participant V as Vue Django
+  C->>D: boutique.ipssi.fr ?
+  D-->>C: 93.184.216.34
+  C->>S: connexion TCP :443
+  C->>S: GET /produits/12/ HTTP/1.1
+  S->>V: routage par urls.py
+  V-->>S: objet + code 200
+  S-->>C: 200 OK + JSON
+            </pre>
+          </div>
+          <p><small>URL → DNS → TCP/IP → verbe HTTP → vue → code d'état. Les cinq notions, dans l'ordre où elles s'enchaînent.</small></p>
+        </section>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- PARTIE 6 — REST -->
+      <!-- ============================================================ -->
+      <section>
+        <section class="section-slide">
+          <div class="part-number">6</div>
+          <h1>REST</h1>
+          <p class="subtitle">Faire évoluer un système dont on ne contrôle aucune des pièces</p>
+          <aside class="notes">
+            Le problème à poser : un navigateur, un cache d'entreprise, un proxy d'opérateur et
+            votre serveur sont écrits par quatre équipes qui ne se connaissent pas, déployés
+            séparément, et jamais mis à jour ensemble. Personne ne peut décréter une migration.
+            Demander comment on conçoit un système dans ces conditions — la réponse spontanée
+            est « on se met d'accord sur un format », et elle ne suffit pas : un accord suppose
+            qu'on puisse le renégocier, ce que justement personne ne peut faire ici.
+
+            Ce qui suit assemble ce que les cinq parties ont construit séparément. Le dire
+            clairement à ce moment-là : ce n'est pas un nouveau sujet, c'est le nom de
+            l'ensemble.
+          </aside>
+        </section>
+
+        <section class="widget-slide" data-widget="restContraintes">
+          <h2>🎮 Retirez la contrainte</h2>
+          <div data-widget-mount></div>
+          <aside class="notes">
+            Six frames, une par contrainte, dans l'ordre où Fielding les dérive. Faire prédire à
+            voix haute avant de valider — la frame « sans état » se joue très bien au tableau en
+            dessinant deux serveurs et un répartiteur.
+
+            La sixième est celle qui compte : après cinq retraits qui cassent quelque chose, la
+            réponse est « rien ». Le code à la demande est la seule contrainte optionnelle. Si
+            personne ne se fait avoir, c'est que les cinq précédentes n'ont pas été jouées
+            sérieusement. Attendre la réponse, ne pas la souffler.
+
+            Le mot à faire ressortir de chaque correction : le COÛT. Une contrainte n'est pas
+            une bonne pratique gratuite, c'est un échange.
+          </aside>
+        </section>
+
+        <section>
+          <h2>D'où ça vient</h2>
+          <p>REST est un <span class="hl">style d'architecture</span> : un jeu de contraintes.
+            Ni un protocole, ni un format, ni une bibliothèque.</p>
+          <blockquote style="font-size:0.6em">
+            <b>Roy Fielding</b>, <em>Architectural Styles and the Design of Network-based
+            Software Architectures</em> — thèse, université de Californie à Irvine,
+            <b>2000</b>, chapitre 5.
+          </blockquote>
+          <p><small>Fielding a co-écrit HTTP/1.0, HTTP/1.1 et l'URI. Ces contraintes ont servi à
+            <b>arbitrer</b> la normalisation de HTTP/1.1 : à trancher entre deux propositions, à
+            écarter celles qui auraient rendu le protocole indéployable.</small></p>
+          <p><small>Le problème qu'elles résolvent, en une phrase : <b>on ne met pas le Web à jour
+            d'un coup.</b> Si un intermédiaire devait comprendre chaque méthode avant de la
+            relayer, il faudrait mettre à jour tous les intermédiaires du monde avant d'en
+            introduire une seule.</small></p>
+          <aside class="notes">
+            Le mot qui compte est « style » : REST ne s'installe pas, ne s'importe pas, ne
+            s'active pas dans un fichier de configuration. On s'y conforme, ou non.
+
+            La citation exacte de la thèse, si la question vient : « One of the major goals of
+            REST is to support the gradual and fragmented deployment of changes within an
+            already deployed architecture. » Le déploiement fragmenté est le fil qui relie les
+            six contraintes qu'ils viennent de jouer.
+          </aside>
+        </section>
+
+        <section>
+          <h2>Quatre niveaux, et où s'arrête DRF</h2>
+          <table style="font-size:0.6em; width:100%; border-collapse:collapse">
+            <tr><td style="color:var(--accent); width:2em"><b>0</b></td>
+                <td>une seule adresse, un seul verbe</td></tr>
+            <tr><td style="color:var(--accent)"><b>1</b></td>
+                <td>des ressources — chacune son adresse</td></tr>
+            <tr><td style="color:var(--accent)"><b>2</b></td>
+                <td>les verbes et les codes d'état</td></tr>
+            <tr><td style="color:var(--accent)"><b>3</b></td>
+                <td>l'hypermédia — la réponse porte les liens vers les actions possibles</td></tr>
+          </table>
+          <p><small>Cette échelle est de <b>Leonard Richardson</b>, 2008. Un
+            <code>ModelViewSet</code> de Django REST Framework s'arrête au
+            <span class="hl">niveau 2</span> — et Fielding a écrit la même année qu'une API qui
+            n'atteint pas le niveau 3 <em>n'est pas REST</em>.</small></p>
+          <aside class="notes">
+            La limite du cours se dit ici, à l'oral : on travaille au niveau 2, comme
+            l'industrie. Ce n'est pas une coquetterie — ils liront partout « API REST » à propos
+            de choses que Fielding refuse de nommer ainsi, et mieux vaut qu'ils sachent d'où
+            vient le désaccord que de leur laisser croire à un consensus qui n'existe pas.
+
+            Si la question « pourquoi personne ne fait du niveau 3 ? » vient : parce que le
+            client doit alors être écrit pour suivre des liens plutôt que pour appeler des URL
+            connues d'avance, ce qui est plus coûteux et rarement rentabilisé sur une API
+            interne. Ne pas développer davantage.
+          </aside>
+        </section>
+
+        <section>
+          <h2>Ce qu'il faut retenir</h2>
+          <ul class="objectives">
+            <li>Le Web est <strong>un service</strong> d'Internet, fondé sur trois inventions : URL, HTTP, HTML.</li>
+            <li>Une URL a six parties ; le <strong>fragment ne part jamais</strong> au serveur.</li>
+            <li>Quatre couches, un emballage par couche ; Django ne vit qu'en <strong>couche application</strong>.</li>
+            <li>Le verbe porte l'intention, l'URL porte la ressource. <strong>POST n'est pas idempotent.</strong></li>
+            <li>Un code d'état dit au client <strong>quoi faire ensuite</strong> : 4xx corrige, 5xx réessaie.</li>
+          </ul>
+          <blockquote>
+            Tout ce qu'écrit un développeur Django sert à produire ces réponses.
+          </blockquote>
+        </section>
+
+        <section>
+          <h2>Exercice de fin de journée</h2>
+          <p>Vous concevez l'API d'une <strong>bibliothèque</strong> : des livres, des emprunts.</p>
+          <ol style="font-size:0.62em">
+            <li>Écrivez les <strong>URL et verbes</strong> des six opérations : lister les livres, consulter un livre, en ajouter un, corriger son titre, le supprimer, emprunter un livre.</li>
+            <li>Pour chacune, donnez le <strong>code d'état</strong> attendu en cas de succès.</li>
+            <li>Donnez le code renvoyé si : le livre n'existe pas · l'utilisateur n'est pas connecté · il est connecté mais n'est pas bibliothécaire · le titre envoyé est vide · la base est injoignable.</li>
+            <li>« Emprunter » n'est pas un nom de ressource. <strong>Proposez deux modélisations</strong> et défendez celle que vous retenez.</li>
+          </ol>
+          <aside class="notes">
+            La question 4 est celle qui sépare la récitation de la conception : elle n'a pas de
+            réponse unique. À reprendre au moment des ViewSet.
+            Corrigé attendu en 1 : GET /livres/, GET /livres/&lt;pk&gt;/, POST /livres/,
+            PATCH /livres/&lt;pk&gt;/, DELETE /livres/&lt;pk&gt;/. Pour l'emprunt, les deux voies
+            classiques : POST /emprunts/ (l'emprunt devient une ressource — à privilégier, il a
+            une date, un état, une durée) ou POST /livres/&lt;pk&gt;/emprunter/ (action dédiée,
+            <code>@action</code> en DRF). Faire ressortir que la première se prête à l'historique,
+            la seconde non.
+          </aside>
+        </section>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- widgets : enregistrés dans window.CourseWidgets AVANT que init.js ne les monte -->
+  <script src="../js/theme.js"></script>
+  <script src="../js/pi-frames.js"></script>
+  <script src="js/widgets/web-invention.js"></script>
+  <script src="js/widgets/url-anatomy.js"></script>
+  <script src="js/widgets/tcpip-stack.js"></script>
+  <script src="js/widgets/traversee-reseau.js"></script>
+  <script src="js/widgets/http-verbs.js"></script>
+  <script src="js/widgets/status-triage.js"></script>
+  <script src="js/widgets/boucle-complete.js"></script>
+  <script src="js/widgets/rest-contraintes.js"></script>
+
+  <script src="../vendor/reveal/dist/reveal.js"></script>
+  <script src="../vendor/reveal/plugin/highlight/highlight.js"></script>
+  <script src="../vendor/reveal/plugin/notes/notes.js"></script>
+  <script src="../vendor/mermaid/mermaid.min.js"></script>
+
+  <script src="../js/init.js"></script>
+</body>
+</html>

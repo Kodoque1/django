@@ -1,0 +1,307 @@
+/* Thème IPSSI pour reveal.js — clair/sombre, basé sur les couleurs de la fiche de cours */
+
+:root,
+:root[data-theme="light"] {
+  --ipssi-blue: #2b4cd6;
+  --ipssi-blue-dark: #1b2f8a;
+  --ipssi-purple: #7c6cf0;
+  --bg: #ffffff;
+  --bg-alt: #f3f5fb;
+  --fg: #1c2333;
+  --fg-muted: #57607a;
+  --accent: var(--ipssi-blue);
+  --accent-2: var(--ipssi-purple);
+  --code-bg: #f5f6fa;
+  --code-border: #dfe3f0;
+  --card-bg: #ffffff;
+  --card-border: #e2e6f2;
+  --ok: #1a8f5e;
+  --warn: #c77d10;
+  --danger: #c2334d;
+  --link: var(--ipssi-blue);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #12162a;
+    --bg-alt: #191f38;
+    --fg: #e9ecf7;
+    --fg-muted: #a6adc9;
+    --accent: #7d93ff;
+    --accent-2: #b6a7ff;
+    --code-bg: #0d1024;
+    --code-border: #2a3157;
+    --card-bg: #171d38;
+    --card-border: #2a3157;
+    --ok: #4fd399;
+    --warn: #f0b74a;
+    --danger: #ff7a90;
+    --link: #7d93ff;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #12162a;
+  --bg-alt: #191f38;
+  --fg: #e9ecf7;
+  --fg-muted: #a6adc9;
+  --accent: #7d93ff;
+  --accent-2: #b6a7ff;
+  --code-bg: #0d1024;
+  --code-border: #2a3157;
+  --card-bg: #171d38;
+  --card-border: #2a3157;
+  --ok: #4fd399;
+  --warn: #f0b74a;
+  --danger: #ff7a90;
+  --link: #7d93ff;
+}
+
+.reveal {
+  --r-background-color: var(--bg);
+  --r-main-color: var(--fg);
+  --r-heading-color: var(--fg);
+  --r-link-color: var(--link);
+  --r-link-color-hover: var(--accent-2);
+  --r-selection-background-color: var(--accent);
+  background-color: var(--bg);
+  color: var(--fg);
+  font-family: "Segoe UI", "Inter", system-ui, -apple-system, sans-serif;
+}
+
+.reveal .slides {
+  text-align: left;
+}
+
+/* reveal.js/reveal.css ne pose pas de reset box-sizing global : sans ceci, tout élément avec
+   à la fois "width:100%" et un padding/border (cartes, tableaux, conteneurs de widgets) déborde
+   de son parent (content-box additionne padding+border à la largeur au lieu de les inclure). */
+.reveal .slides section *,
+.reveal .slides section *::before,
+.reveal .slides section *::after {
+  box-sizing: border-box;
+}
+
+.reveal h1,
+.reveal h2,
+.reveal h3,
+.reveal h4 {
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 700;
+  color: var(--fg);
+}
+
+.reveal h1 { font-size: 1.9em; }
+.reveal h2 {
+  font-size: 1.35em;
+  color: var(--accent);
+  border-bottom: 3px solid var(--accent);
+  padding-bottom: 0.2em;
+  margin-bottom: 0.6em;
+}
+.reveal h3 {
+  font-size: 1.05em;
+  color: var(--accent-2);
+}
+
+.reveal section > p,
+.reveal section > ul,
+.reveal section > ol {
+  font-size: 0.72em;
+  line-height: 1.45;
+}
+
+.reveal ul, .reveal ol {
+  display: block;
+}
+
+.reveal li {
+  margin-bottom: 0.35em;
+}
+
+.reveal small {
+  color: var(--fg-muted);
+}
+
+.reveal blockquote {
+  background: var(--bg-alt);
+  border-left: 4px solid var(--accent);
+  box-shadow: none;
+  width: 100%;
+  box-sizing: border-box;
+  margin-left: 0;
+  margin-right: 0;
+  font-style: normal;
+  padding: 0.5em 1em;
+  font-size: 0.68em;
+  color: var(--fg-muted);
+}
+
+.reveal code {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 4px;
+  padding: 0.05em 0.35em;
+}
+
+.reveal pre {
+  box-shadow: none;
+  border: 1px solid var(--code-border);
+  border-radius: 8px;
+  width: 100%;
+}
+
+.reveal pre code {
+  background: var(--code-bg);
+  max-height: 420px;
+}
+
+/* --- title slide --- */
+.title-slide {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100%;
+}
+.title-slide .kicker {
+  color: var(--accent);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.55em;
+  margin-bottom: 0.5em;
+}
+.title-slide h1 {
+  margin-bottom: 0.2em;
+}
+.title-slide .subtitle {
+  color: var(--fg-muted);
+  font-size: 0.65em;
+  margin-top: 0.4em;
+}
+.title-slide .modules-badge {
+  display: inline-flex;
+  gap: 0.5em;
+  margin-top: 1.2em;
+  font-size: 0.45em;
+}
+.badge {
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
+  padding: 0.25em 0.9em;
+  color: var(--fg-muted);
+  background: var(--bg-alt);
+}
+
+/* --- section divider slides --- */
+.section-slide {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100%;
+}
+.section-slide .part-number {
+  font-size: 3.2em;
+  font-weight: 800;
+  color: var(--accent);
+  opacity: 0.35;
+  line-height: 1;
+}
+.section-slide h1 { margin-top: 0.1em; }
+
+/* --- two/three column layouts --- */
+.cols {
+  display: grid;
+  gap: 1.2em;
+  width: 100%;
+}
+.cols-2 { grid-template-columns: 1fr 1fr; }
+.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+.cols-narrow-wide { grid-template-columns: 0.85fr 1.15fr; }
+
+/* --- cards --- */
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  padding: 0.8em 1em;
+  font-size: 0.6em;
+}
+.card h4 {
+  margin: 0 0 0.4em 0;
+  font-size: 1.05em;
+  color: var(--accent);
+}
+.card.ok { border-color: var(--ok); }
+.card.warn { border-color: var(--warn); }
+.card.danger { border-color: var(--danger); }
+
+/* --- objectives list --- */
+.objectives li::marker {
+  color: var(--accent);
+}
+
+/* --- mermaid --- */
+.mermaid-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  background: var(--bg-alt);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 0.7em;
+}
+.mermaid {
+  font-size: 15px;
+}
+/* Plafond en px LOGIQUES (le deck reveal.js fait 720px de haut et est mis à l'échelle par
+   transform : un cap en vh se réfère à la fenêtre, pas à la slide, et ne contraint donc rien).
+   Les diagrammes trop grands se réduisent pour tenir avec le titre et le texte de la slide. */
+.mermaid svg {
+  max-width: 100%;
+  max-height: 280px;
+}
+
+/* Coins arrondis sur les nœuds/acteurs générés par Mermaid (rx/ry en CSS, supporté par les
+   navigateurs évergreen), pour matcher l'arrondi des cartes/panneaux (.card, .fc-stage…). */
+.mermaid .node rect,
+.mermaid .cluster rect,
+.mermaid .actor {
+  rx: 8px;
+  ry: 8px;
+}
+
+/* --- fragments / highlight text --- */
+.reveal .hl { color: var(--accent); font-weight: 700; }
+.reveal .hl-danger { color: var(--danger); font-weight: 700; }
+.reveal .hl-ok { color: var(--ok); font-weight: 700; }
+
+/* --- footer / progress tweaks --- */
+.reveal .progress { color: var(--accent); height: 4px; }
+.reveal .controls { color: var(--accent); }
+
+.slide-footnote {
+  position: absolute;
+  bottom: 0.4em;
+  left: 0.6em;
+  font-size: 0.35em;
+  color: var(--fg-muted);
+}
+
+/* --- theme toggle button --- */
+#theme-toggle {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 40;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  color: var(--fg);
+  border-radius: 999px;
+  padding: 0.4em 0.7em;
+  font-size: 14px;
+  cursor: pointer;
+}
+#theme-toggle:hover { border-color: var(--accent); }

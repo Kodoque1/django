@@ -1,0 +1,10 @@
+# L'environnement du TP se reconstruit depuis requirements.txt — c'est même le TP
+# « préparation de l'environnement » du Jour 1. Il pèse 20 000 fichiers.
+tp-instrumentation/.venv/
+
+__pycache__/
+*.pyc
+
+# `cours/vendor/` n'est PAS ignoré, et ne doit pas l'être : le cours est hors-ligne
+# intégral, aucune page ne fait de requête réseau. Les dépendances vendorisées font
+# partie du dépôt.
