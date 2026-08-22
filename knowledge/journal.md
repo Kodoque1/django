@@ -1,5 +1,23 @@
 # Journal des chantiers
 
+## 2026-08-22 — module IV écrit et relu (multi-agent)
+
+- Module IV Autorisations écrit par voie dédiée (`cours/J4-01-autorisations/`) : 4 jeux de
+  frames (permissions de vue, permissions de projet, les deux refus 401/403 fidèles à la
+  mesure 4.5, règles sur mesure + frame-pont vers l'authentification).
+- Relecture en fan-out (7 axes). Corrections de l'orchestrateur :
+  - HTML cassé réparé : `</pre>` manquant sur la slide jeton (index.html:137), labels
+    `Token ***` malformés dans permissions-frames, prompt avorté dans refus-frames ;
+  - calques : « grande ouverte », « tracent une frontière » (×2), « coûte une séance »,
+    « est un socle » — remplacés par le mécanisme énoncé ;
+  - un mot une chose : « erroné/faux/invalide » → « erroné » seul ; « identifié mais
+    non autorisé/refusé » → une seule forme ;
+  - recouvrement avec le module III : l'`explain` de la frame-pont `pont-permissions`
+    ne livre plus les deux codes ni la formule 401/403 (la partie 4 du module IV les fait
+    construire) ; l'`explain` de `qui-passe` ne préempte plus le WWW-Authenticate.
+- Verdict final : quatre bancs de module verts sur J4-01-autorisations ET re-vérifiés sur
+  J2-01-drf après modification de sa frame-pont.
+
 ## 2026-08-22 — mise en place Hermes multi-agent
 
 - Environnement complété : venv TP créé (`tp-instrumentation/.venv`, Django 5.2.17), `jsdom`

@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Autorisations — Jour 4</title>
+
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="../vendor/reveal/dist/reveal.css" />
+  <link rel="stylesheet" href="../vendor/reveal/dist/theme/black.css" id="reveal-theme" />
+  <link rel="stylesheet" href="../vendor/reveal/plugin/highlight/monokai.css" />
+  <link rel="stylesheet" href="../css/theme-ipssi.css" />
+  <link rel="stylesheet" href="../css/widgets.css" />
+  <link rel="stylesheet" href="../css/pi-frames.css" />
+  <link rel="stylesheet" href="../css/jeux.css" />
+  <link rel="stylesheet" href="../css/simulations.css" />
+</head>
+<body>
+  <div class="reveal">
+    <div class="slides">
+
+      <!-- ============================================================ -->
+      <!-- TITRE -->
+      <!-- ============================================================ -->
+      <section class="title-slide">
+        <div class="kicker">Mastère Dév, Data &amp; IA — 4ᵉ année · IPSSI</div>
+        <h1>Autorisations</h1>
+        <p class="subtitle">
+          Jour 4 — qui peut lire, qui peut écrire
+        </p>
+        <div class="modules-badge">
+          <span class="badge">Utilisateur &amp; jeton</span>
+          <span class="badge">Classes de permission</span>
+          <span class="badge">Réglage de projet</span>
+          <span class="badge">401 · 403</span>
+          <span class="badge">Règles sur mesure</span>
+        </div>
+        <aside class="notes">
+          Enchaîne le module III : la boutique expose ses produits via un ModelViewSet,
+          et n'importe qui peut tout faire — lire ET écrire. Le module pose la question
+          du droit : qui a le droit de quoi.
+
+          OBJECTIFS (pour vous, pas à projeter) — créer un utilisateur et lui obtenir
+          un jeton · distinguer AllowAny (le défaut silencieux) d'IsAuthenticated ·
+          situer les deux niveaux de réglage (vue et projet) et leur priorité ·
+          diagnostiquer 401 contre 403 à partir de la mesure du TP temps 4.5 ·
+          écrire une BasePermission avec message · relier chaque refus au mécanisme
+          qui produit request.user (pont vers le module V).
+
+          Fidélité : toute affirmation ici est tranchée par le temps 4.5 de
+          tp-instrumentation/verifier.py — 401 avec WWW-Authenticate sous
+          TokenAuthentication, 403 sous SessionAuthentication, jeton faux → 401,
+          identifié mais non autorisé → 403 avec le message dans « detail ».
+
+          Les jeux D niveaux 1-7 sont reportés : tout le module passe par les frames.
+          Ne pas improviser de jeu ni de simulation supplémentaire.
+
+          Consigne de fond inchangée : on pose la question, la salle construit, la
+          frame tranche. Faire noter les prédictions avant validation.
+        </aside>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- PARTIE 1 — UN COMPTE, UN JETON -->
+      <!-- ============================================================ -->
+      <section>
+        <section class="section-slide">
+          <div class="part-number">1</div>
+          <h1>Un compte, un jeton</h1>
+          <p class="subtitle">Des écritures modifient les données ; aucune ne dit qui écrit</p>
+          <aside class="notes">
+            Le problème à poser : hier, un client anonyme a pu POSTer un produit, en
+            modifier un autre, en supprimer un troisième. La base ne sait pas QUI a fait
+            quoi — aucun log ne porte de nom, aucune règle ne peut viser personne. Avant
+            de parler de droits, il faut que chaque requête puisse porter une identité :
+            un compte, et quelque chose de présentable à chaque requête — un jeton.
+
+            DÉMONSTRATION EN DIRECT pour toute la partie (contrat de design §2 :
+            exécuter des commandes ne se transforme ni en jeu ni en frame). Déroulé :
+
+            1. Dans le venv du TP, ajouter "rest_framework.authtoken" à INSTALLED_APPS,
+               puis migrate : la table du jeton apparaît.
+            2. Créer l'utilisateur dans manage.py shell — exactement la mesure du TP :
+               create_user("etu", password="etu"), puis Token.objects.create(user=u).
+               Montrer la clé générée : 40 caractères hexadécimaux.
+            3. Obtenir le jeton comme un vrai client : POST /api-token-auth/ avec
+               username et password en formulaire → {"token": "…"}.
+            4. Rejouer une requête avec l'en-tête Authorization: Token &lt;clé&gt; :
+               même réponse qu'hier — rien n'a encore changé côté droit. C'est normal :
+               on a fabriqué une identité, on n'a posé AUCUNE question de permission.
+               Ne pas anticiper la partie suivante.
+          </aside>
+        </section>
+
+        <section>
+          <h2>Créer l'utilisateur, fabriquer le jeton</h2>
+          <pre><code class="language-python" data-trim data-noescape># settings.py — l'application du jeton
+INSTALLED_APPS = [
+    # …
+    "rest_framework.authtoken",
+]</code></pre>
+          <pre><code class="language-bash" data-trim data-noescape>python manage.py migrate
+
+python manage.py shell</code></pre>
+          <pre><code class="language-python" data-trim data-noescape>&gt;&gt;&gt; from django.contrib.auth.models import User
+&gt;&gt;&gt; from rest_framework.authtoken.models import Token
+&gt;&gt;&gt; u = User.objects.create_user("etu", password="etu")
+&gt;&gt;&gt; Token.objects.create(user=u)
+&lt;Token: 9944b09199c62bcf9418ad846dd0e4bbdfc6ee4b&gt;</code></pre>
+          <blockquote>
+            Le compte vit dans les tables Django existantes ; le jeton est une ligne
+            liée à ce compte, générée à la création.
+          </blockquote>
+          <aside class="notes">
+            PROCÉDURE (démonstration en direct, puis refaite par chaque étudiant).
+            Points d'attention :
+
+            1. migrate est obligatoire après l'ajout d'authtoken — sinon la table
+               Token n'existe pas et le shell échoue.
+            2. create_user hache le mot de passe ; User(password="etu") à la main ne
+               le ferait pas — le compte serait inexploitable.
+            3. La clé du jeton s'affiche UNE fois à la création ; elle reste relisible
+               depuis la table (u.auth_token), mais c'est un secret : dans un projet
+               réel, jamais commité.
+            4. Slide suivante : le jeton devient un moyen de connexion — montrer le
+               POST /api-token-auth/ AVANT de la projeter ? Non : dérouler ici déjà
+               l'obtention par HTTP, la slide sert de trace écrite.
+          </aside>
+        </section>
+
+        <section>
+          <h2>Le jeton comme moyen de connexion</h2>
+          <pre><code class="language-bash" data-trim data-noescape>curl -X POST http://localhost:8000/api-token-auth/ \
+     -d "username=etu&password=etu"</code></pre>
+          <pre><code class="language-json" data-trim data-noescape>{"token": "9944b09199c62bcf9418ad846dd0e4bbdfc6ee4b"}</code></pre>
+          <p>Chaque requête suivante porte ensuite :</p>
+          <pre><code class="language-http" data-trim data-noescape>Authorization: Token 9944b0...</code></pre>
+          <blockquote>
+            Mot de passe : envoyé une fois, à l'échange. Jeton : présenté à chaque
+            requête, sans jamais retransmettre le mot de passe.
+          </blockquote>
+          <aside class="notes">
+            PROCÉDURE (suite de la démonstration) :
+
+            1. POST /api-token-auth/ nécessite l'URL branchée : en TP, elle l'est déjà ;
+               sinon url(r'^api-token-auth/', obtain_auth_token) — le montrer une fois.
+            2. Mauvais mot de passe → 400 avec {"non_field_errors": ["Impossible de
+               se connecter…"]} — le refus existe déjà ICI, avant toute histoire de
+               permission : c'est un échec de connexion, pas un échec de droit.
+            3. L'en-tête : schéma « Token », un espace, la clé. Un espace manquant ou
+               un schéma absent = identité non lue — la salle le verra produire un
+               refus dans la suite du module.
+
+            Point de vocabulaire à poser maintenant : compte (la ligne User), jeton
+            (la clé présentée), en-tête Authorization (l'endroit où il voyage). Les
+            parties suivantes supposent un utilisateur « etu » et sa clé sous la main.
+          </aside>
+        </section>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- PARTIE 2 — QUI PEUT LIRE ? QUI PEUT ÉCRIRE ? -->
+      <!-- ============================================================ -->
+      <section>
+        <section class="section-slide">
+          <div class="part-number">2</div>
+          <h1>Qui peut lire&nbsp;? Qui peut écrire&nbsp;?</h1>
+          <p class="subtitle">Ce matin encore, la boutique obéit à n'importe qui</p>
+          <aside class="notes">
+            Le problème à poser : le jeton existe, mais rien ne l'exige. Le client anonyme
+            d'hier obtient toujours la liste — ET il peut toujours supprimer un produit.
+            La question du droit n'a jamais été posée : ni « faut-il être connu ? », ni
+            « suffit-il d'être connu ? ». Les frames font construire les deux réponses :
+            ce qui passe sans déclaration (AllowAny, le défaut silencieux), puis ce que
+            change IsAuthenticated — frontière unique entre identifié et anonyme, sans
+            distinction de verbe.
+
+            Faire noter noir sur blanc la prédiction de chaque frame avant validation :
+            la salle croie souvent qu'une vue sans permission_classes refuse, et qu'
+            IsAuthenticated ferme les écritures seules. Les deux intuitions sont fausses.
+          </aside>
+        </section>
+
+        <section class="widget-slide" data-widget="permissionsVueFrames">
+          <h2>🎮 Qui franchit la vue&nbsp;?</h2>
+          <div data-widget-mount></div>
+          <aside class="notes">
+            Cinq frames sur le ProduitViewSet du module III. Déroulé :
+
+            1. Frame 1 : la référence — sans déclaration, tout passe. Beaucoup annoncent
+               401 ou une page de connexion ; corriger par la frame, puis nommer
+               AllowAny comme classe par défaut.
+            2. Frame 2 : IsAuthenticated + TokenAuthentication, anonyme → 401. Poser la
+               question du CODE AVANT de la valider : le 403 est le distracteur attendu,
+               il sera disséqué à la partie 4.
+            3. Frame 3 (multi) : le piège est « POST avec jeton valide » — beaucoup
+               cochent qu'il est refusé. IsAuthenticated ne regarde pas le verbe.
+            4. Frames 4-5 : AllowAny explicite égale absence de déclaration ; la règle
+               écrite sur le ViewSet couvre liste ET détail.
+
+            Erreur fréquente à guetter : croire que la présence d'un jeton quelconque
+            suffit. Un jeton erroné ne crée pas request.user — la frame 3 le dit, la
+            partie 4 le mesure.
+          </aside>
+        </section>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- PARTIE 3 — LES AUTORISATIONS DU PROJET -->
+      <!-- ============================================================ -->
+      <section>
+        <section class="section-slide">
+          <div class="part-number">3</div>
+          <h1>Les autorisations de projet</h1>
+          <p class="subtitle">Chaque vue neuve naît sans garde-fou</p>
+          <aside class="notes">
+            Le problème à poser : recopier IsAuthenticated sur chaque vue marche
+            aujourd'hui — jusqu'à la vue oubliée de demain, qui reste accessible à tous
+            parce que le défaut de DRF est AllowAny. Fermer PAR DÉFAUT demande un
+            réglage écrit une seule fois, au niveau du projet. Les frames font
+            construire DEFAULT_PERMISSION_CLASSES, son rôle de socle, et l'ordre de
+            priorité : une vue qui déclare gagne toujours sur le projet.
+          </aside>
+        </section>
+
+        <section class="widget-slide" data-widget="permissionsProjetFrames">
+          <h2>🎮 Vue contre projet&nbsp;: qui décide&nbsp;?</h2>
+          <div data-widget-mount></div>
+          <aside class="notes">
+            Quatre frames. Points de passage :
+
+            1. Frame 1 : une vue muette hérite du réglage du projet — 401. Le
+               distracteur « le serveur refuse de démarrer » rappelle qu'un défaut a
+               toujours une valeur.
+            2. Frame 2 : la déclaration de vue ÉCRASE le réglage, jamais l'inverse —
+               refuser l'idée d'une addition des deux règles.
+            3. Frame 3 (slots) : faire ranger AVANT de conclure — l'ordre de priorité
+               se construit cas par cas.
+            4. Frame 4 (sans indice) : la combinaison complète — fermer par défaut,
+               rouvrir explicitement la vue publique. C'est la posture de projet à
+               retenir pour le Jour 5.
+
+            Rappeler en synthèse orale : DEFAULT_PERMISSION_CLASSES ne figure PAS dans
+            settings.py par défaut — son absence EST le choix AllowAny. Le silence a
+            un sens, et il est permissif.
+          </aside>
+        </section>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- PARTIE 4 — 401 CONTRE 403 -->
+      <!-- ============================================================ -->
+      <section>
+        <section class="section-slide">
+          <div class="part-number">4</div>
+          <h1>Deux refus, deux diagnostics</h1>
+          <p class="subtitle">Même écran de refus, deux questions différentes restées sans réponse</p>
+          <aside class="notes">
+            Le problème à poser : la partie 2 a produit un 401 ; la partie 3 pourrait en
+            produire d'autres — et pourtant, certains serveurs répondent 403 là où le
+            nôtre répond 401, À CONFIGURATION DE PERMISSION IDENTIQUE. Deux codes, deux
+            phrases : « je ne sais pas qui tu es » et « je sais, et c'est non ». Confondre
+            les deux allonge le débogage : on corrige le mot de passe quand le
+            problème est le droit, ou l'inverse.
+
+            Tout ce qui suit est fidèle à la mesure : TokenAuthentication anonyme → 401
+            + WWW-Authenticate: Token ; SessionAuthentication même requête → 403 ; jeton
+            faux → 401 ; identifié refusé → 403 avec message dans « detail ». Faire
+            noter les prédictions : elles serviront de contrat au TP.
+          </aside>
+        </section>
+
+        <section class="widget-slide" data-widget="refusFrames">
+          <h2>🎮 Lire un refus</h2>
+          <div data-widget-mount></div>
+          <aside class="notes">
+            Six frames. Déroulé :
+
+            1. Frame 1 : le moment clé — pourquoi SessionAuthentication produit 403.
+               Laisser longuement chercher : la réponse tient en une phrase (401 exige
+               de NOMMER un mécanisme d'identification ; la session n'en propose aucun
+               à un client sans en-tête).
+            2. Frame 2 : WWW-Authenticate dit COMMENT revenir — c'est l'en-tête qui rend
+               le 401 exploitable par un client.
+            3. Frame 3 : jeton faux = personne reconnu = 401. Refuser l'intuition
+               « j'ai bien envoyé quelque chose, donc 403 ».
+            4. Frames 4-5 : le second refus — identifié mais non autorisé — et le
+               rangement des deux phrases. Ce rangement EST le diagnostic.
+            5. Frame 6 (sans indice) : appliquer le diagnostic — un 403 à jeton valide
+               se corrige côté PERMISSION, jamais côté identité.
+          </aside>
+        </section>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- PARTIE 5 — RÈGLES SUR MESURE -->
+      <!-- ============================================================ -->
+      <section>
+        <section class="section-slide">
+          <div class="part-number">5</div>
+          <h1>Règles sur mesure</h1>
+          <p class="subtitle">« Réservé aux administrateurs » : rien de prêt ne le dit</p>
+          <aside class="notes">
+            Le problème à poser : AllowAny et IsAuthenticated ne posent qu'une seule
+            question — le client est-il connu ou inconnu ? Le jour où la règle devient « seulement les
+            membres de l'équipe », aucune classe fournie ne la connaît : is_staff
+            n'appartient à aucune d'elles. DRF prévoit alors un point d'extension, la
+            BasePermission, avec deux méthodes — l'une pour la vue entière, l'autre
+            objet par objet. Les frames font construire les deux rôles, l'assemblage
+            de la classe, la destination du message, puis referment le module sur la
+            question d'où vient request.user.
+          </aside>
+        </section>
+
+        <section class="widget-slide" data-widget="personnalisationFrames">
+          <h2>🎮 Écrire sa propre règle</h2>
+          <div data-widget-mount></div>
+          <aside class="notes">
+            Cinq frames. Déroulé :
+
+            1. Frame 1 : has_permission porte la décision prise avant tout objet — la
+               liste comprise. Le distracteur has_object_permission est l'erreur de
+               rangement classique.
+            2. Frame 2 : has_object_permission ne tourne QUE sur les vues de détail.
+               Ne pas développer get_object ici — la règle suffit.
+            3. Frames 3-4 : assembler la classe, puis retrouver le message dans le
+               corps du 403 sous « detail » — la mesure exacte du TP.
+            4. Frame 5, LA FRAME-PONT : toute permission lit request.user sans jamais
+               le fabriquer. Qui l'a rempli ? Une classe d'authentification, à partir
+               de l'en-tête Authorization. Laisser la salle formuler que CE mécanisme
+               mérite son propre examen — identifier n'est pas autoriser — puis
+               arrêter là : c'est l'ouverture naturelle de la journée suivante, ne
+               pas nommer le module ni anticiper son contenu.
+          </aside>
+        </section>
+      </section>
+
+    </div>
+  </div>
+
+  <script src="../js/theme.js"></script>
+  <script src="../js/pi-frames.js"></script>
+  <script src="js/widgets/permissions-frames.js"></script>
+  <script src="js/widgets/refus-frames.js"></script>
+  <script src="js/widgets/personnalisation-frames.js"></script>
+
+  <script src="../vendor/reveal/dist/reveal.js"></script>
+  <script src="../vendor/reveal/plugin/highlight/highlight.js"></script>
+  <script src="../vendor/reveal/plugin/notes/notes.js"></script>
+  <script src="../vendor/mermaid/mermaid.min.js"></script>
+
+  <script src="../js/init.js"></script>
+</body>
+</html>

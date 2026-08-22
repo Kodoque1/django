@@ -125,7 +125,7 @@
           routeur: "Retirer l'URL empêche TOUT LE MONDE de modifier ou lire le détail — pas seulement ceux qui n'en ont pas le droit. La restriction doit distinguer les clients, pas supprimer la fonction.",
           client: "Le client est hors de votre contrôle : n'importe quel script peut envoyer ce qu'il veut. Côté serveur, la décision appartient à la vue.",
         },
-        explain: "<code>permission_classes</code>. Par défaut, un ViewSet autorise tout le monde — d'où le DELETE anonyme. Les classes de permission répondent à deux questions distinctes : « qui es-tu ? » et « as-tu le droit ? » — et leurs deux refus ne portent PAS le même code.",
+        explain: "<code>permission_classes</code>. Par défaut, un ViewSet autorise tout le monde — d'où le DELETE anonyme. Les classes de permission répondent alors à deux questions distinctes — et chaque question porte son propre refus.",
       },
     ];
   }
