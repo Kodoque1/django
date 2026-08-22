@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Django REST Framework — Jour 2</title>
+
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="../vendor/reveal/dist/reveal.css" />
+  <link rel="stylesheet" href="../vendor/reveal/dist/theme/black.css" id="reveal-theme" />
+  <link rel="stylesheet" href="../vendor/reveal/plugin/highlight/monokai.css" />
+  <link rel="stylesheet" href="../css/theme-ipssi.css" />
+  <link rel="stylesheet" href="../css/widgets.css" />
+  <link rel="stylesheet" href="../css/pi-frames.css" />
+  <link rel="stylesheet" href="../css/jeux.css" />
+  <link rel="stylesheet" href="../css/simulations.css" />
+</head>
+<body>
+  <div class="reveal">
+    <div class="slides">
+
+      <!-- ============================================================ -->
+      <!-- TITRE -->
+      <!-- ============================================================ -->
+      <section class="title-slide">
+        <div class="kicker">Mastère Dév, Data &amp; IA — 4ᵉ année · IPSSI</div>
+        <h1>Django REST Framework</h1>
+        <p class="subtitle">
+          Jour 2 — du modèle Python à l'API consommable
+        </p>
+        <div class="modules-badge">
+          <span class="badge">Configuration</span>
+          <span class="badge">Sérialiseurs</span>
+          <span class="badge">ViewSet &amp; routeur</span>
+          <span class="badge">Consommer</span>
+          <span class="badge">CORS</span>
+        </div>
+        <aside class="notes">
+          Enchaîne le module II : la boutique tourne côté serveur, rien n'est encore
+          accessible hors des vues Django. DRF s'ajoute à la chaîne de middlewares déjà
+          connue — mêmes middlewares, même routeur, même ORM.
+
+          OBJECTIFS (pour vous, pas à projeter) — installer et brancher DRF en trois
+          réglages · prédire quels champs un ModelSerializer exige et ce que contient
+          un corps 400 · lire la table verbe → action écrite par DefaultRouter ·
+          localiser un N+1 né côté sérialiseur et le corriger sur le queryset ·
+          écrire un client requests correct (json=, code avant corps) · expliquer qui
+          bloque quand une erreur CORS apparaît.
+
+          Consigne de fond inchangée : on pose la question, la salle construit, la
+          frame tranche. Le temps 4 du TP mesure tout ceci sur un vrai Django 5.2 —
+          faire noter les prédictions avant.
+
+          Les gros jeux A/C/D/E/F′ sont reportés : tout le module passe par les
+          frames, sans simulation. Ne pas improviser de jeu supplémentaire.
+        </aside>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- PARTIE 1 — CONFIGURATION -->
+      <!-- ============================================================ -->
+      <section>
+        <section class="section-slide">
+          <div class="part-number">1</div>
+          <h1>Configuration initiale</h1>
+          <p class="subtitle">Un dictionnaire Python ne traverse pas le réseau</p>
+          <aside class="notes">
+            Le problème à poser : la vue <code>JsonResponse(produit.__dict__)</code> existe
+            presque — sauf que le modèle porte des <code>Decimal</code> et des dates que JSON
+            ignore, que rien ne valide ce qui entre, et que chaque vue réécrit les mêmes
+            codes d'état. Demander à la salle d'écrire mentalement cette vue pour la liste,
+            puis pour le détail, puis pour la création : la répétition se voit avant toute
+            explication.
+          </aside>
+        </section>
+
+        <section>
+          <h2>Trois réglages, dans cet ordre</h2>
+          <pre><code class="language-python" data-trim data-noescape>pip install djangorestframework
+
+# settings.py
+INSTALLED_APPS = [
+    # … les apps Django, puis :
+    "rest_framework",
+]</code></pre>
+          <p>Puis, là où une application expose son API&nbsp;:</p>
+          <pre><code class="language-python" data-trim data-noescape># urls.py du projet
+from django.urls import include, path
+
+urlpatterns = [
+    path("api/", include("boutique.urls")),
+]</code></pre>
+          <blockquote>
+            Aucun middleware à ajouter, aucun réglage obligatoire de plus : DRF
+            s'ajoute à la chaîne de middlewares déjà connue, il n'en écrit pas une nouvelle.
+          </blockquote>
+          <aside class="notes">
+            PROCÉDURE (contrat de design §2 : suivre des étapes ne se transforme ni en jeu
+            ni en frame). DÉMONSTRATION EN DIRECT — déroulé conseillé :
+
+            1. Installer dans le venv du TP (rappel : Django 5.2 épinglé, jamais le
+               Django 3.2 système).
+            2. Ajouter <code>rest_framework</code>, lancer <code>manage.py check</code> : rien
+               d'autre ne bouge.
+            3. Montrer que l'API n'existe pas encore : <code>/api/produits/</code> répond
+               404 tant qu'aucune URL n'est branchée — l'installation n'expose RIEN.
+
+            Point de vocabulaire à poser maintenant : « bibliothèque » installée,
+            application ajoutée, URLs incluses. Les parties suivantes supposent ces
+            trois gestes faits ; les faire refaire par chaque étudiant avant de continuer.
+          </aside>
+        </section>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- PARTIE 2 — SÉRIALISEURS -->
+      <!-- ============================================================ -->
+      <section>
+        <section class="section-slide">
+          <div class="part-number">2</div>
+          <h1>Les sérialiseurs</h1>
+          <p class="subtitle">Ce qui entre n'a pas été vérifié ; ce qui sort n'est pas convertible</p>
+          <aside class="notes">
+            Le problème à poser, dans les deux sens : entrant, le corps d'une requête est
+            du texte que personne n'a validé — n'importe quel client peut envoyer
+            <code>"prix": "gratuit"</code>. Sortant, le modèle porte des objets Python
+            (<code>Decimal</code>, date) que JSON refuse. Deux problèmes, un seul objet qui
+            les résout.
+          </aside>
+        </section>
+
+        <section>
+          <h2>À la main, ça fuit dès la première exception</h2>
+          <div class="cols cols-2">
+            <div>
+              <pre><code class="language-python" data-trim data-noescape>def detail(request, pk):
+    p = Produit.objects.get(pk=pk)
+    return JsonResponse({
+        "nom": p.nom,
+        "prix": str(p.prix),
+    })</code></pre>
+            </div>
+            <div>
+              <ul style="font-size:0.62em">
+                <li><code>str(p.prix)</code> : la conversion se fait champ par champ, dans chaque vue</li>
+                <li><code>p.categorie</code> ? une clé étrangère ne se met pas en JSON — une ligne de plus</li>
+                <li>entrant : aucun contrôle — <code>{"prix": "gratuit"}</code> entre en base ou plante</li>
+                <li>les erreurs partent en texte libre, que le client devra parser</li>
+              </ul>
+            </div>
+          </div>
+          <aside class="notes">
+            Slide de MOTIVATION : ne PAS donner le nom des solutions ici. La salle propose
+            souvent « un to_dict() » — bonne intuition, et elle échoue au premier champ
+            imbriqué ou au premier formulaire entrant. C'est exactement le trou que les
+            frames font construire.
+          </aside>
+        </section>
+
+        <section class="widget-slide" data-widget="serialiseursFrames">
+          <h2>🎮 Valider, convertir, refuser</h2>
+          <div data-widget-mount></div>
+          <aside class="notes">
+            Six frames sur un décor unique (le modèle Produit du module II, devenu
+            ModelSerializer). Déroulé :
+
+            1. Faire répondre chacun aux deux premières AVANT validation — les types
+               (<code>Decimal</code>) et les champs requis sont là où l'intuition se trompe.
+            2. La frame « PUT amputé » prépare directement la découverte 4.3 du TP :
+               DRF exige un PUT complet, contrairement au protocole brut. Ne pas la
+               conclure soi-même.
+            3. La frame « survit » EST le piège du TP (stock qui reste à 12 après un PUT
+               complet) : faire noter la prédiction noir sur blanc.
+            4. Terminer sur <code>serializer.errors</code> : c'est lui que le 400 met dans
+               son corps, champ par champ.
+
+            Erreur fréquente à guetter : croire que <code>validated_data</code> exige la
+            sauvegarde. Il existe dès <code>is_valid()</code>.
+          </aside>
+        </section>
+
+        <section>
+          <h2>Récapitulatif — un seul objet, quatre responsabilités</h2>
+          <table style="font-size:0.6em; width:100%; border-collapse:collapse">
+            <tr>
+              <th style="text-align:left; color:var(--accent)">Étape</th>
+              <th style="text-align:left; color:var(--accent)">Code</th>
+              <th style="text-align:left; color:var(--accent)">Résultat</th>
+            </tr>
+            <tr><td>décrire les champs</td><td><code>ModelSerializer</code> + <code>Meta.fields</code></td><td>règles lues sur le modèle : requis, défaut, lecture seule</td></tr>
+            <tr><td>valider l'entrant</td><td><code>s = ProduitSerializer(data=req.data)</code> puis <code>s.is_valid()</code></td><td>vrai → <code>s.validated_data</code> (types convertis) · faux → <code>s.errors</code></td></tr>
+            <tr><td>écrire</td><td><code>s.save()</code></td><td>crée ou met à jour depuis <code>validated_data</code></td></tr>
+            <tr><td>lire</td><td><code>s.data</code></td><td>l'objet converti en types JSON-acceptables</td></tr>
+          </table>
+          <p><small>Ce tableau récapitule ce que les frames viennent d'établir.</small></p>
+          <aside class="notes">
+            Slide de RÉFÉRENCE, après les frames. Insister sur l'exclusivité
+            validated_data / errors : jamais les deux à la fois.
+          </aside>
+        </section>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- PARTIE 3 — VIEWSET ET ROUTEUR -->
+      <!-- ============================================================ -->
+      <section>
+        <section class="section-slide">
+          <div class="part-number">3</div>
+          <h1>ViewSet et routeur</h1>
+          <p class="subtitle">Deux URL, dix verbes possibles : qui décide quoi ?</p>
+          <aside class="notes">
+            Le problème à poser : une ressource REST standard, c'est deux adresses (la
+            liste, le détail) et six opérations dessus — soit une douzaine de
+            combinaisons URL × méthode à câbler à la main, chacune avec le bon code
+            d'état. Écrire cela pour UN modèle prend une heure ; la boutique en a
+            quatre. Demander combien de lignes de urlpatterns ils accepteraient d'écrire.
+          </aside>
+        </section>
+
+        <section class="widget-slide" data-widget="viewsetFrames">
+          <h2>🎮 Deux URL : qui répond à quoi ?</h2>
+          <div data-widget-mount></div>
+          <aside class="notes">
+            Six frames. Points de passage :
+
+            1. Les deux premières font CONSTRUIRE la table verbe → action — celle du
+               module I était du vocabulaire reçu, ici elle se déduit des actions fournies.
+            2. « POST sur le détail » : bien marquer la différence 405 / 400 / 404, les
+               trois codes que la salle confond le plus.
+            3. « le 404 vient de la vue » fait le lien explicite avec le module II : le
+               routeur trouve sa vue ici, alors qu'il échouait avant toute exécution sur
+               /produits/abc/. Même code, deux origines, deux coûts.
+            4. « DELETE réussi » : 204, pas 200 — le même triage que le Jour 1, appliqué
+               aux réponses d'un vrai framework.
+            5. La dernière nomme <code>ModelViewSet</code> et laisse ouvert ce qui autorise
+               tout : ne pas développer, la partie 5 y revient par la question posée.
+          </aside>
+        </section>
+
+        <section>
+          <h2>Récapitulatif — ce que cinq lignes produisent</h2>
+          <pre><code class="language-python" data-trim data-noescape>class ProduitViewSet(viewsets.ModelViewSet):
+    queryset = Produit.objects.all().order_by("id")
+    serializer_class = ProduitSerializer
+
+routeur = DefaultRouter()
+routeur.register("produits", ProduitViewSet, basename="produit")</code></pre>
+          <table style="font-size:0.58em; width:100%; border-collapse:collapse; margin-top:0.4em">
+            <tr>
+              <th style="text-align:left; color:var(--accent)">URL générée</th>
+              <th style="text-align:left; color:var(--accent)">Verbes servis</th>
+            </tr>
+            <tr><td><code>/api/produits/</code></td><td>GET → list · POST → create</td></tr>
+            <tr><td><code>/api/produits/&lt;pk&gt;/</code></td><td>GET → retrieve · PUT → update · PATCH → partial_update · DELETE → destroy</td></tr>
+          </table>
+          <p><small>La table est inscrite dans chaque motif généré (attribut
+            <code>actions</code>) : <code>routeur.urls</code> se lit comme n'importe quel
+            urlpatterns. Un mauvais verbe y répond 405 avec l'en-tête
+            <code>Allow</code>.</small></p>
+          <aside class="notes">
+            Slide de RÉFÉRENCE, après les frames — la table était leur corrigé. Rappeler
+            que DefaultRouter ajoute aussi la racine de l'API (<code>/api/</code>), vue en
+            démonstration.
+          </aside>
+        </section>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- PARTIE 4 — VUES GÉNÉRIQUES ET N+1 -->
+      <!-- ============================================================ -->
+      <section>
+        <section class="section-slide">
+          <div class="part-number">4</div>
+          <h1>Vues génériques et requêtes cachées</h1>
+          <p class="subtitle">La réponse est correcte ; la base, elle, encaisse</p>
+          <aside class="notes">
+            Le problème à poser : rien n'est cassé. La liste répond 200, le JSON est
+            juste, les tests passent — et seize requêtes SQL sont parties pour huit
+            produits parce que DEUX champs ont été ajoutés au sérialiseur. Le N+1 du
+            module II vivait dans la vue ; celui-ci vit dans la conversion. Demander où,
+            selon eux, on corrige.
+          </aside>
+        </section>
+
+        <section class="widget-slide" data-widget="vuesDrfFrames">
+          <h2>🎮 Compter avant de mesurer</h2>
+          <div data-widget-mount></div>
+          <aside class="notes">
+            Quatre frames de PRÉDICTION, calquées sur les mesures 4.6 du TP : 1 → 17 → 2.
+            Faire écrire les nombres avant validation.
+
+            1. Frame « plat » : la référence (1 requête) — beaucoup surestiment déjà.
+            2. Frame « deux champs » : le moment clé. 8 produits × 2 relations parcourues
+               DANS le sérialiseur = 16 lectures ajoutées. Faire remarquer qu'aucune
+               erreur, aucun log visible en développement ne l'annonce.
+            3. Frame « où corriger » : la salle propose souvent le sérialiseur — c'est
+               FAUX, et c'est le point le plus rentable du module : le sérialiseur reçoit
+               des objets déjà chargés, il ne peut qu'aller les chercher un à un.
+            4. Finir sur <code>queryset</code> : un attribut hérité, deux requêtes, zéro
+               ligne de vue réécrite.
+          </aside>
+        </section>
+
+        <section>
+          <h2>Récapitulatif — le même N+1, un nouvel endroit</h2>
+          <table style="font-size:0.62em; width:100%; border-collapse:collapse">
+            <tr>
+              <th style="text-align:left; color:var(--accent)">Sérialiseur</th>
+              <th style="text-align:left; color:var(--accent)">QuerySet</th>
+              <th style="text-align:left; color:var(--accent)">Requêtes (GET liste, 8 produits)</th>
+            </tr>
+            <tr><td>plat</td><td>par défaut</td><td><b>1</b></td></tr>
+            <tr><td>+ categorie, avis</td><td>par défaut</td><td><b>17</b> — 1 + 8 + 8</td></tr>
+            <tr><td>+ categorie, avis</td><td><code>select_related("categorie").prefetch_related("avis")</code></td><td><b>2</b></td></tr>
+          </table>
+          <blockquote>
+            Jointure vers le « un seul », seconde requête vers le « plusieurs » — les
+            règles déjà établies tiennent mot pour mot. Seul l'emplacement change :
+            l'attribut <code>queryset</code> du ViewSet, lu par list et retrieve.
+          </blockquote>
+          <aside class="notes">
+            Slide de RÉFÉRENCE. Ces trois nombres seront comptés pour de vrai au TP
+            (CaptureQueriesContext) : garder les prédictions visibles jusqu'alors.
+          </aside>
+        </section>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- PARTIE 5 — CONSOMMER L'API -->
+      <!-- ============================================================ -->
+      <section>
+        <section class="section-slide">
+          <div class="part-number">5</div>
+          <h1>Consommer l'API</h1>
+          <p class="subtitle">Une fois publiée, votre API n'est plus qu'une adresse</p>
+          <aside class="notes">
+            Le problème à poser : un autre service (un moteur de recommandation, un
+            back-office) va appeler cette API depuis Python, sans navigateur, sans
+            formulaires. Ce client-là doit annoncer ce qu'il envoie, lire le code AVANT
+            le corps, et savoir distinguer 201, 204, 400 et 405 sans deviner. Tout ce
+            qui suit est du côté client — mais c'est en écrivant le client qu'on
+            comprend le contrat du serveur.
+          </aside>
+        </section>
+
+        <section class="widget-slide" data-widget="consommationFrames">
+          <h2>🎮 Cinq frames côté client</h2>
+          <div data-widget-mount></div>
+          <aside class="notes">
+            Périmètre : le client SERVEUR (requests). Le client navigateur — fetch, onglet
+            réseau — est traité à la partie suivante, uniquement sous l'angle CORS.
+
+            1. « json contre data » : l'erreur la plus fréquente en projet. Faire énoncer
+               l'en-tête envoyé par chaque forme.
+            2. « lire la réponse » : le 200 ne garantit pas une liste non vide — distinction
+               succès HTTP / contenu métier.
+            3. Le slots des codes reprend 201 / 204 / 400 / 405 vus en partie 3, mais
+               cette fois du point de vue de QUI LES LIT.
+            4. « la forme demandée » : la négociation de contenu explique pourquoi le
+               navigateur affiche une page HTML et requests reçoit du JSON — même URL.
+            5. LA FRAME-PONT : le DELETE anonyme possible sur le ViewSet. Laisser la
+               salle conclure que la restriction est côté vue, puis arrêter là — les
+               classes de permission sont l'objet du reste de la journée, et leurs deux
+               refus (qui es-tu ? / as-tu le droit ?) portent deux codes différents que le
+               TP mesure (401 contre 403). Ne PAS donner les codes maintenant.
+          </aside>
+        </section>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- PARTIE 6 — CORS -->
+      <!-- ============================================================ -->
+      <section>
+        <section class="section-slide">
+          <div class="part-number">6</div>
+          <h1>django-cors-headers</h1>
+          <p class="subtitle">Le même appel réussit en Python — et depuis un navigateur, rien n'arrive au client</p>
+          <aside class="notes">
+            Le problème à poser : le front du projet appelle <code>localhost:8000</code>
+            depuis <code>localhost:3000</code>. requests obtient un 200 impeccable ;
+            le fetch JavaScript, lui, jette la réponse. Même URL, même serveur, même
+            instant — demander ce qui diffère. La frame fait construire la réponse :
+            c'est le NAVIGATEUR qui bloque, au retour.
+          </aside>
+        </section>
+
+        <section class="widget-slide" data-widget="corsFrames">
+          <h2>🎮 Une page, deux origines</h2>
+          <div data-widget-mount></div>
+          <aside class="notes">
+            UNE frame — le reste est DÉMONSTRATION EN DIRECT, rien à construire de plus
+            (contrat de design §2) :
+
+            1. Servir une petite page statique sur un port différent de l'API, tenter le
+               fetch : erreur CORS dans la console, PENDANT QUE la trace serveur montre le
+               200. Ce décalage est tout le sujet.
+            2. Installer la solution, trois réglages :
+               <code>pip install django-cors-headers</code>,
+               <code>"corsheaders"</code> dans INSTALLED_APPS,
+               <code>"corsheaders.middleware.CorsMiddleware"</code> AU SOMMET de
+               MIDDLEWARE — rappeler pourquoi : un middleware placé sous un coupeur
+               pourrait ne jamais ajouter ses en-têtes (module II, Chrono sous le Videur).
+            3. Régler <code>CORS_ALLOWED_ORIGINS = ["http://localhost:3000"]</code>,
+               rejouer le fetch : 200 lu cette fois.
+            4. Montrer la requête préliminaire OPTIONS sur un POST avec en-têtes
+               personnalisés, puis revenir à la règle : seule l'ORIGINE du CLIENT compte ;
+               requests n'en a pas, donc n'est jamais concerné.
+          </aside>
+        </section>
+      </section>
+
+    </div>
+  </div>
+
+  <script src="../js/theme.js"></script>
+  <script src="../js/pi-frames.js"></script>
+  <script src="js/widgets/serialiseurs-frames.js"></script>
+  <script src="js/widgets/viewset-frames.js"></script>
+  <script src="js/widgets/vues-drf-frames.js"></script>
+  <script src="js/widgets/consommation-frames.js"></script>
+  <script src="js/widgets/cors-frames.js"></script>
+
+  <script src="../vendor/reveal/dist/reveal.js"></script>
+  <script src="../vendor/reveal/plugin/highlight/highlight.js"></script>
+  <script src="../vendor/reveal/plugin/notes/notes.js"></script>
+  <script src="../vendor/mermaid/mermaid.min.js"></script>
+
+  <script src="../js/init.js"></script>
+</body>
+</html>

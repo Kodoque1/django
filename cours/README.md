@@ -166,8 +166,8 @@ L'état d'avancement, la couverture des 32 entrées du programme IPSSI et l'ordr
 vivent dans **un seul endroit** : [`../README.md`](../README.md), le document de pilotage. Ne pas
 en tenir une seconde copie ici — c'est ainsi que les deux divergent.
 
-En bref : le module I est livré ; les modules II à V restent à écrire, et cinq jeux sérieux les
-accompagneront (`../design/jeux/`). Les jeux du Jour 1 se terminent tous par une **frame-pont**
+En bref : les modules I et II sont livrés ; les modules III à V restent à écrire. Les jeux du
+Jour 1 se terminent tous par une **frame-pont**
 vers ces modules (`path()` et `APPEND_SLASH`, place de Django dans la pile, actions d'un
 `ModelViewSet`, codes produits par `Http404` / `is_valid()` / les classes de permission) — de
 quoi rattacher explicitement chaque notion réseau à ce qui sera écrit en Python.

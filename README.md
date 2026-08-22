@@ -162,7 +162,7 @@ amortis. On couvre tout le programme plutôt que d'aller profond sur un quart.
 |---|---|---|
 | 1 | `CLAUDE.md`, doctrine des simulations, socle CSS, banc-deck | ✅ fait |
 | 2 | module II — cycle, URL, vues, modèles, admin | ✅ fait |
-| 3 | module III — DRF : sérialiseurs, ViewSet, consommation | à écrire |
+| 3 | module III — DRF : sérialiseurs, ViewSet, consommation | ✅ fait (`cours/J2-01-drf/`, 5 jeux de frames) |
 | 4 | module IV — autorisations | à écrire |
 | 5 | module V — authentification | à écrire |
 | 6 | documents historiques (module I), version étudiante, cheatsheets | à écrire |
