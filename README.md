@@ -164,7 +164,7 @@ amortis. On couvre tout le programme plutôt que d'aller profond sur un quart.
 | 2 | module II — cycle, URL, vues, modèles, admin | ✅ fait |
 | 3 | module III — DRF : sérialiseurs, ViewSet, consommation | ✅ fait (`cours/J2-01-drf/`, 5 jeux de frames) |
 | 4 | module IV — autorisations | ✅ fait (`cours/J4-01-autorisations/`, 4 jeux de frames) |
-| 5 | module V — authentification | à écrire |
+| 5 | module V — authentification | ✅ fait (`cours/J4-02-authentification/`, 6 jeux de frames) |
 | 6 | documents historiques (module I), version étudiante, cheatsheets | à écrire |
 | — | `django-lite.js` + jeux A/C/D/E/F′ | **reporté**, specs conservées |
 | — | **jeu G — le débogueur de terrain** | au catalogue, non spécifié |

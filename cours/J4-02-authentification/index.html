@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Authentification — Jour 4</title>
+
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="../vendor/reveal/dist/reveal.css" />
+  <link rel="stylesheet" href="../vendor/reveal/dist/theme/black.css" id="reveal-theme" />
+  <link rel="stylesheet" href="../vendor/reveal/plugin/highlight/monokai.css" />
+  <link rel="stylesheet" href="../css/theme-ipssi.css" />
+  <link rel="stylesheet" href="../css/widgets.css" />
+  <link rel="stylesheet" href="../css/pi-frames.css" />
+  <link rel="stylesheet" href="../css/jeux.css" />
+  <link rel="stylesheet" href="../css/simulations.css" />
+</head>
+<body>
+  <div class="reveal">
+    <div class="slides">
+
+      <!-- ============================================================ -->
+      <!-- TITRE -->
+      <!-- ============================================================ -->
+      <section class="title-slide">
+        <div class="kicker">Mastère Dév, Data &amp; IA — 4ᵉ année · IPSSI</div>
+        <h1>Authentification</h1>
+        <p class="subtitle">
+          Jour 4 — qui parle&nbsp;?
+        </p>
+        <div class="modules-badge">
+          <span class="badge">Qui remplit request.user</span>
+          <span class="badge">Session</span>
+          <span class="badge">Jeton</span>
+          <span class="badge">Réglage par défaut</span>
+          <span class="badge">Authentification, puis permission</span>
+        </div>
+        <aside class="notes">
+          Referme la journée : hier matin, chaque permission lisait request.user
+          sans que personne n'ait expliqué qui l'écrit. Le module répond à cette
+          question — les classes d'authentification — et referme sur l'ordre des
+          moments : identifier PUIS autoriser.
+
+          OBJECTIFS (pour vous, pas à projeter) — nommer le mécanisme qui remplit
+          request.user et request.auth · situer session, Basic et jeton comme trois
+          classes au même contrat · diagnostiquer 401 contre 403 selon la classe
+          déclarée · régler DEFAULT_AUTHENTICATION_CLASSES · brancher le jeton de
+          bout en bout · appliquer l'ordre identifier → autoriser en diagnostic.
+
+          Fidélité : toute affirmation ici est tranchée par le temps 4.5 de
+          tp-instrumentation/verifier.py — TokenAuthentication anonyme → 401 +
+          WWW-Authenticate: Token ; SessionAuthentication anonyme → 403 ;
+          jeton erroné → 401 ; identifié refusé → 403 avec « detail ».
+          BasicAuthentication (401 + WWW-Authenticate: Basic realm="api") vient du
+          comportement documenté de DRF, non mesuré au TP — le dire si la question
+          vient.
+
+          Tout le module passe par les frames ; la partie 5 s'accompagne d'une
+          démonstration en direct. Ne pas improviser de jeu ni de simulation.
+
+          Consigne de fond inchangée : on pose la question, la salle construit, la
+          frame tranche. Faire noter les prédictions avant validation.
+        </aside>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- PARTIE 1 — D'OÙ VIENT REQUEST.USER ? -->
+      <!-- ============================================================ -->
+      <section>
+        <section class="section-slide">
+          <div class="part-number">1</div>
+          <h1>D'où vient <code>request.user</code>&nbsp;?</h1>
+          <p class="subtitle">Une valeur lue partout, remplie nulle part</p>
+          <aside class="notes">
+            Le problème à poser : chaque classe de permission écrite hier lit
+            request.user — aucune ne l'écrit. Si cette valeur est fausse,
+            toutes les règles se trompent ensemble, avec assurance. Avant de
+            parler des moyens d'identification un à un, faire construire le
+            mécanisme commun : une liste authentication_classes, essayée dans
+            l'ordre, dont la première réussite remplit request.user — faute de
+            quoi l'anonyme y prend place et la requête continue.
+
+            Frame 2 (ordre des étapes) : faire dérouler à voix haute avant de
+            cliquer. La salle place souvent « fini » trop tôt — une classe qui
+            échoue n'arrête pas la liste.
+          </aside>
+        </section>
+
+        <section class="widget-slide" data-widget="authentificationFrames">
+          <h2>🎮 Qui a rempli <code>request.user</code>&nbsp;?</h2>
+          <div data-widget-mount></div>
+          <aside class="notes">
+            Cinq frames. Déroulé :
+
+            1. Frame 1 : la référence — personne ne devine « une classe
+               d'authentification » spontanément ; beaucoup répondent la
+               permission elle-même. Corriger par la frame, puis poser le mot :
+               classes d'authentification.
+            2. Frame 2 (order) : l'ordre de la liste est un ordre de priorité —
+               première réussite gagne, échec ne stoppe pas.
+            3. Frames 3-4 : BasicAuthentication, entrée V.A. Insister : base64
+               n'est PAS du chiffrement — c'est la confusion la plus coûteuse du
+               lot. Le mot de passe repart recodé à chaque requête.
+            4. Frame 5 : fin de liste sans reconnaissance = utilisateur anonyme,
+               pas d'erreur. La permission reste maîtresse de la suite — ne pas
+               anticiper les codes de refus, ils viennent dans les parties 2-3.
+          </aside>
+        </section>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- PARTIE 2 — LA SESSION -->
+      <!-- ============================================================ -->
+      <section>
+        <section class="section-slide">
+          <div class="part-number">2</div>
+          <h1>L'authentification de session</h1>
+          <p class="subtitle">Un client reconnu sans avoir rien présenté</p>
+          <aside class="notes">
+            Le problème à poser : un navigateur connecté par un formulaire envoie
+            une requête SANS en-tête Authorization — et il est reconnu. Par quoi ?
+            La réponse (le cookie sessionid, renvoyé automatiquement) fonde tout
+            le reste : la session est un mécanisme DE NAVIGATEUR. C'est ce qui
+            explique la mesure centrale — client sans cookie sous
+            SessionAuthentication : 403, jamais 401, parce qu'un 401 exige de
+            nommer un mécanisme et que face à un non-navigateur la session n'en
+            a aucun à proposer. Même permission qu'avec les jetons, autre code :
+            le code dépend de la classe déclarée, pas seulement de la règle.
+
+            Faire noter la prédiction de la frame 2 AVANT validation : après le
+            temps passé hier sur le 401, la salle répondra massivement 401.
+
+            Frame 4 (CSRF) : rester factuel — le cookie prouve qui parle, pas que
+            ce quelqu'un a voulu écrire. Ne pas ouvrir le tutoriel CSRF.
+          </aside>
+        </section>
+
+        <section class="widget-slide" data-widget="sessionFrames">
+          <h2>🎮 Le client qui n'envoie rien</h2>
+          <div data-widget-mount></div>
+          <aside class="notes">
+            Quatre frames. Points de passage :
+
+            1. Frame 1 : le cookie — déposé à la connexion, renvoyé
+               automatiquement à chaque requête vers le serveur. Aucune connexion
+               restée ouverte, aucune adresse IP mémorisée.
+            2. Frame 2 : LA frame de mesure — 403 et pas 401. Laisser chercher
+               longtemps : la réponse tient en une phrase (401 exige de NOMMER un
+               mécanisme d'identification ; face à un client sans cookie, la
+               session n'en propose aucun).
+            3. Frame 3 : conséquence — la session convient au navigateur seul ;
+               hors navigateur, c'est une gestion de cookie manuelle là où un
+               en-tête tient en une ligne.
+            4. Frame 4 : écriture surveillée — CSRF. Le cookie suffit au GET ; le POST exige une seconde vérification (CSRF).
+          </aside>
+        </section>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- PARTIE 3 — LE JETON -->
+      <!-- ============================================================ -->
+      <section>
+        <section class="section-slide">
+          <div class="part-number">3</div>
+          <h1>L'authentification par jeton</h1>
+          <p class="subtitle">Un script, une app mobile — comment se faire reconnaître&nbsp;?</p>
+          <aside class="notes">
+            Le problème à poser : la session reconnaît le navigateur — et refuse
+            tout le reste. Un script, une application mobile, un service ont
+            besoin d'une identité présentable dans la requête elle-même : un
+            en-tête. Les frames font construire la mesure exacte du vrai serveur
+            (temps 4.5) : client sans en-tête sous TokenAuthentication → 401 avec
+            WWW-Authenticate: Token — le même client, la même permission, donnait
+            403 sous la session ; jeton erroné → 401 aussi (« faux » ne désigne
+            personne) ; et le passage clé → compte via la table des jetons.
+
+            Contraste à faire sortir à l'oral, frame 1 : même vue, même absence
+            d'identifiant — 403 sous la session, 401 + WWW-Authenticate sous le
+            jeton. Le code dit quel mécanisme le serveur est prêt à accepter.
+          </aside>
+        </section>
+
+        <section class="widget-slide" data-widget="jetonFrames">
+          <h2>🎮 Une identité en en-tête</h2>
+          <div data-widget-mount></div>
+          <aside class="notes">
+            Trois frames. Déroulé :
+
+            1. Frame 1 : 401 + WWW-Authenticate: Token. Rappeler la mesure
+               jumelle de la partie 2 (403) — le code change avec la classe
+               déclarée, pas avec la permission.
+            2. Frame 2 : jeton erroné = personne reconnu = 401. Refuser
+               l'intuition « j'ai bien envoyé quelque chose, donc 403 » — déjà
+               croisée dans le diagnostic des refus ; ici elle repose sur la
+               mesure, pas sur la règle.
+            3. Frame 3 : la table des jetons — chaque ligne pointe vers un
+               compte ; request.auth garde la ligne, request.user l'utilisateur. La
+               clé est aléatoire, elle ne transporte rien.
+          </aside>
+        </section>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- PARTIE 4 — L'AUTHENTIFICATION PAR DÉFAUT -->
+      <!-- ============================================================ -->
+      <section>
+        <section class="section-slide">
+          <div class="part-number">4</div>
+          <h1>L'authentification par défaut</h1>
+          <p class="subtitle">Personne n'a écrit <code>authentication_classes</code></p>
+          <aside class="notes">
+            Le problème à poser : toutes les vues écrites jusqu'ici omettent
+            authentication_classes — et pourtant request.user est rempli à chaque
+            requête. Des classes tournent bel et bien : celles de
+            DEFAULT_AUTHENTICATION_CLASSES, qui vaut [SessionAuthentication,
+            BasicAuthentication] tant que rien ne le change — deux moyens pensés
+            pour le navigateur, aucun pour un script. Fermer le projet au jeton
+            demande UNE ligne de réglage, comme pour DEFAULT_PERMISSION_CLASSES :
+            même mécanique de socle et d'écrasement, autre attribut.
+
+            Point d'ancrage oral : vérifier settings.py du projet TP — le réglage
+            n'y figure pas ; son silence EST le choix session + Basic.
+          </aside>
+        </section>
+
+        <section class="widget-slide" data-widget="defautFrames">
+          <h2>🎮 Qui tourne quand la vue n'écrit rien&nbsp;?</h2>
+          <div data-widget-mount></div>
+          <aside class="notes">
+            Deux frames. Points de passage :
+
+            1. Frame pont-drf : la vue muette hérite de la liste du projet —
+               [SessionAuthentication, BasicAuthentication] par défaut. Le
+               distracteur « toutes les classes existantes » rappelle que DRF
+               lit une liste nommée, il n'inventorie pas.
+            2. Frame 2 : écrire DEFAULT_AUTHENTICATION_CLASSES = [Token…]
+               change le refus des vues muettes — 401 + WWW-Authenticate au lieu
+               du 403 de la session. Le réglage choisit le moyen, et le moyen
+               choisit le code.
+
+            Synthèse orale en miroir du module des permissions : deux réglages
+            jumeaux, un pour l'identité, un pour le droit — chacun écrasé par la
+            déclaration de vue, chacun silencieux par défaut dans settings.py.
+          </aside>
+        </section>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- PARTIE 5 — IMPLÉMENTATION PAR JETON -->
+      <!-- ============================================================ -->
+      <section>
+        <section class="section-slide">
+          <div class="part-number">5</div>
+          <h1>Mettre le jeton en place</h1>
+          <p class="subtitle">La classe existe, rien derrière elle</p>
+          <aside class="notes">
+            Le problème à poser : la classe TokenAuthentication existe dès
+            l'installation de DRF, mais rien derrière elle — ni table des jetons,
+            ni URL d'échange. Déclarer le jeton de bout en bout demande quatre
+            gestes dans un ordre où chacun rend le suivant possible. Les frames
+            font construire cet ordre, l'échange de connexion, et l'écriture
+            exacte de l'en-tête ; la slide finale sert de trace écrite pour la
+            démonstration en direct (contrat de design §2 : exécuter des
+            commandes ne devient ni jeu ni frame).
+
+            DÉMONSTRATION EN DIRECT après les frames — déroulé :
+
+            1. Dans le venv du TP : INSTALLED_APPS += "rest_framework.authtoken",
+               puis migrate — montrer la table créée.
+            2. manage.py shell : create_user("etu", password="etu") puis
+               Token.objects.create(user=u) — clé de 40 caractères hexadécimaux.
+            3. Ajouter l'URL d'échange obtain_auth_token si l'URL d'échange manque.
+            4. curl -X POST …/api-token-auth/ -d "username=etu&password=etu"
+               → {"token": "..."} ; mauvais mot de passe → 400.
+            5. Rejouer GET /api/produits/ avec Authorization: Token *** → 200 ;
+               puis « Token faux » → 401 + WWW-Authenticate — la mesure revue en
+               direct.
+          </aside>
+        </section>
+
+        <section class="widget-slide" data-widget="implementationFrames">
+          <h2>🎮 Du projet vierge à l'en-tête exact</h2>
+          <div data-widget-mount></div>
+          <aside class="notes">
+            Trois frames. Déroulé :
+
+            1. Frame 1 (order) : les quatre gestes dans l'ordre où chacun rend le
+               suivant possible. Erreur fréquente : migrate avant INSTALLED_APPS.
+            2. Frame 2 : l'échange — le mot de passe voyage une fois, la clé
+               repart ensuite seule. Refuser le cookie (pas de navigateur requis)
+               et le mot de passe neuf.
+            3. Frame 3 (build) : « Token », espace, clé. Ni « Bearer » ni
+               « Basic » : chaque classe ne reconnaît que son schéma.
+          </aside>
+        </section>
+
+        <section>
+          <h2>La procédure, écrite</h2>
+          <pre><code class="language-python" data-trim data-noescape># settings.py — l'application du jeton
+INSTALLED_APPS = [
+    # …
+    "rest_framework.authtoken",
+]</code></pre>
+          <pre><code class="language-python" data-trim data-noescape>&gt;&gt;&gt; from django.contrib.auth.models import User
+&gt;&gt;&gt; from rest_framework.authtoken.models import Token
+&gt;&gt;&gt; u = User.objects.create_user("etu", password="etu")
+&gt;&gt;&gt; Token.objects.create(user=u)
+&lt;Token: 9944b09199c62bcf9418ad846dd0e4bbdfc6ee4b&gt;</code></pre>
+          <aside class="notes">
+            Trace écrite de la démonstration — la projeter APRÈS l'avoir jouée en
+            direct, pas avant. Points d'attention :
+
+            1. migrate obligatoire après l'ajout d'authtoken, sinon la table
+               Token n'existe pas.
+            2. create_user hache le mot de passe ; User(password="etu") écrit à
+               la main ne le ferait pas.
+            3. La clé est un secret : jamais commitée, jamais partagée.
+          </aside>
+        </section>
+
+        <section>
+          <h2>La procédure, écrite — l'échange</h2>
+          <pre><code class="language-bash" data-trim data-noescape>curl -X POST http://localhost:8000/api-token-auth/ \
+     -d "username=etu&password=etu"
+# {"token": "9944b09199c62bcf9418ad846dd0e4bbdfc6ee4b"}
+
+curl http://localhost:8000/api/produits/ \
+     -H "Authorization: Token 9944b09199c62bcf9418ad846dd0e4bbdfc6ee4b"</code></pre>
+          <aside class="notes">
+            Suite de la trace écrite.
+
+            1. L'URL /api-token-auth/ vient d'obtain_auth_token — branchée dans
+               le TP ; sinon urls.py : path("api-token-auth/", obtain_auth_token).
+               Mauvais mot de passe → 400 avec non_field_errors : un échec de
+               connexion, pas une question de droit.
+            2. Le second curl rejoue la mesure : 200 avec la bonne clé, 401 +
+               WWW-Authenticate: Token avec « faux ». Le faire vivre devant la
+               salle plutôt que de l'affirmer.
+            3. Rappeler si besoin le réglage DEFAULT_AUTHENTICATION_CLASSES vu à
+               la partie précédente : sans lui, les vues muettes restent sous
+               session + Basic.
+          </aside>
+        </section>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- PARTIE 6 — IDENTIFIER, PUIS AUTORISER -->
+      <!-- ============================================================ -->
+      <section>
+        <section class="section-slide">
+          <div class="part-number">6</div>
+          <h1>Identifier, puis autoriser</h1>
+          <p class="subtitle">Deux familles de classes, un ordre</p>
+          <aside class="notes">
+            Le problème à poser : deux familles de classes cohabitent désormais
+            sur chaque vue — authentication_classes et permission_classes — et
+            leur ordre d'exécution n'a jamais été dit. Il structure aussi le
+            diagnostic : une permission décide toujours sur l'identité que
+            l'authentification lui a laissée ; si cette identité est fausse,
+            chaque règle se trompe. Refermer la journée sur cet ordre — c'est la
+            charnière entre les deux modules de la journée, et le premier
+            réflexe de débogage d'un refus étonnant.
+          </aside>
+        </section>
+
+        <section class="widget-slide" data-widget="ordreFrames">
+          <h2>🎮 Dans quel ordre les poser&nbsp;?</h2>
+          <div data-widget-mount></div>
+          <aside class="notes">
+            Deux frames. Déroulé :
+
+            1. Frame 1 (order) : identifier → autoriser → servir. La vue ne
+               s'exécute qu'après les deux contrôles.
+            2. Frame 2, sans indice : un refus étonnant se diagnostique en
+               commençant par l'authentification — request.user faux rend fausse
+               toute décision de droit prise dessus.
+
+            Synthèse orale possible pour clore la journée : deux questions par
+            requête — « qui parle ? » puis « a-t-il le droit ? » — deux listes de
+            classes, deux réglages de projet, un seul ordre. Toute affirmation
+            faite ici est mesurable sur le vrai serveur du TP.
+          </aside>
+        </section>
+      </section>
+
+    </div>
+  </div>
+
+  <script src="../js/theme.js"></script>
+  <script src="../js/pi-frames.js"></script>
+  <script src="js/widgets/authentification-frames.js"></script>
+  <script src="js/widgets/session-frames.js"></script>
+  <script src="js/widgets/jeton-frames.js"></script>
+  <script src="js/widgets/implementation-frames.js"></script>
+
+  <script src="../vendor/reveal/dist/reveal.js"></script>
+  <script src="../vendor/reveal/plugin/highlight/highlight.js"></script>
+  <script src="../vendor/reveal/plugin/notes/notes.js"></script>
+  <script src="../vendor/mermaid/mermaid.min.js"></script>
+
+  <script src="../js/init.js"></script>
+</body>
+</html>

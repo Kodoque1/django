@@ -1,5 +1,30 @@
 # Journal des chantiers
 
+## 2026-08-23 — module V écrit et relu (multi-agent) — noyau du cours complet
+
+- Module V Authentification écrit par voie dédiée (`cours/J4-02-authentification/`) :
+  6 jeux de frames (mécanisme request.user, session → 403 fidèle à la mesure 4.5,
+  jeton → 401 + WWW-Authenticate, DEFAULT_AUTHENTICATION_CLASSES avec la frame
+  `pont-drf`, implémentation par jeton, ordre identifier→autoriser).
+- Relecture en fan-out (7 axes). Corrections de l'orchestrateur :
+  - **HTML** : 14 prompts dont le `?` avait été remplacé par `&nbsp;` ; 3 séquences
+    `<code>…***` jamais fermées ; un `</code>` doublé — tous réparés, balises vérifiées
+    équilibrées sur les 4 widgets ;
+  - révélations de titre (5) : « L'ordre du serveur, l'ordre du diagnostic »,
+    « Identifier avant d'autoriser », « Reconnaître un navigateur », « Une identité qui se
+    présente à chaque requête », « Quatre câbles » ;
+  - calques wiring/prix : « câbles », « brancher » (×3), « le confort du cookie a un prix » (×2) ;
+  - incohérence de fond (axe E) : le module faisait dire au 403 « identité connue puis
+    refusée » alors que la partie 2 répond 403 à un client SANS identité (mesure 4.5).
+    Arbitré : 403 = « je sais qui tu es, et c'est non » pour la permission ; le refus de
+    session est décrit sans la formule ;
+  - compte/utilisateur harmonisé (request.user porte l'utilisateur) ;
+  - trois doublons de régime avec J4-01 recadrés : jeton erroné re-centré sur la table des
+    jetons, session sans cookie re-centrée sur le navigateur, frame d'ouverture re-centrée
+    sur l'ordre des classes plutôt que sur « qui remplit request.user » (déjà construit par
+    la frame-pont du IV).
+- Verdict final : quatre bancs verts sur J4-02 ET J4-01.
+
 ## 2026-08-22 — module IV écrit et relu (multi-agent)
 
 - Module IV Autorisations écrit par voie dédiée (`cours/J4-01-autorisations/`) : 4 jeux de
