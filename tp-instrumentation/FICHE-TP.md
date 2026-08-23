@@ -671,6 +671,10 @@ assert len(cap.captured_queries) == 1
 > force le curseur de debug le temps du bloc : il compte partout. Même famille :
 > `assertNumQueries(3)` dans un test, qui casse la CI le jour où quelqu'un ajoute un N+1. C'est la
 > version *automatisée* du feedback : le test dit précisément ce qui a changé, sans relecture.
+>
+> Le même contexte compte aussi le SQL d'une **requête HTTP entière** : `CaptureQueriesContext`
+> autour d'un `Client().get("/produits/")` vous dit combien de requêtes a coûté le aller-retour
+> complet — c'est ainsi qu'on mesurera la liste DRF au temps 4.
 
 ### 3.5 — L'exercice des logs (20 min, chronométré)
 
