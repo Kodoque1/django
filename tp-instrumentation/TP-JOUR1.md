@@ -145,13 +145,19 @@ python3 -i amorce.py
 # → vous êtes dans le REPL, tout est chargé (modèles, semer(), recharger_urls(), montrer())
 ```
 
-Testez :
+Testez que les modèles et la base répondent :
 
 ```python
->>> from django.urls import resolve
->>> resolve("/api/produits/")
-# → doit afficher la route, la vue, kwargs (si vous avez déjà écrit urlpatterns)
+>>> from __main__ import Produit, Categorie, Avis
+>>> Produit.objects.count()
+8
+>>> Categorie.objects.first().nom
+'Claviers'
+>>> Avis.objects.filter(note=5).count()
+8
 ```
+
+> `resolve()` et les tests d'URLs viendront au **Jour 2**, quand vous aurez créé votre projet avec `urlpatterns`.
 
 ---
 
