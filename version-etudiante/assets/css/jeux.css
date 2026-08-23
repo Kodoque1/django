@@ -1,0 +1,226 @@
+/*
+ * jeux.css — scènes propres aux mini-jeux du module « Architecture RESTful ».
+ * Préfixes : wi- (les trois inventions du Web) · ts- (pile TCP/IP) · hv- (Le bon verbe) ·
+ * rc- (Retirez la contrainte).
+ * Les interactions elles-mêmes sont habillées par pi-frames.css.
+ */
+
+.pi-dim { color: var(--fg-muted); font-weight: 400; }
+
+/* ============== wi- : navigateur ↔ serveur, les trois inventions ============== */
+
+.wi-svg { max-height: 190px; }
+.wi-box { fill: var(--card-bg); stroke: var(--card-border); stroke-width: 1.5; }
+.wi-chrome { fill: var(--bg-alt); stroke: var(--card-border); stroke-width: 1.5; }
+.wi-mini { fill: var(--fg-muted); font-size: 11px; }
+.wi-label { fill: var(--fg); font-size: 15px; font-weight: 700; }
+.wi-screen { fill: var(--fg-muted); font-size: 13px; }
+.wi-screen.err { fill: var(--danger); font-weight: 700; }
+.wi-screen.ok { fill: var(--ok); font-weight: 700; }
+.wi-link { stroke: var(--fg-muted); stroke-width: 2; }
+.wi-link.cut { stroke: var(--danger); stroke-dasharray: 5 5; }
+.wi-invention-rect { fill: var(--bg-alt); stroke: var(--accent-2); stroke-width: 1.5; }
+.wi-invention.manquante .wi-invention-rect { stroke: var(--danger); opacity: 0.5; }
+.wi-invention-nom { fill: var(--accent-2); font-size: 13px; font-weight: 700; }
+.wi-invention.manquante .wi-invention-nom { fill: var(--danger); }
+.wi-invention-verbe { fill: var(--fg-muted); font-size: 10px; }
+.wi-cross { stroke: var(--danger); stroke-width: 2.5; }
+.wi-packet { fill: var(--accent); }
+.wi-packet.err { fill: var(--danger); }
+
+/* ================= ts- : la pile TCP/IP ================= */
+
+.ts-stage {
+  display: grid;
+  grid-template-columns: 0.8fr 1.2fr;
+  gap: 0.6em;
+  align-items: center;
+}
+.ts-couches { display: grid; gap: 0.18em; }
+.ts-couche {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5em;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-left: 3px solid var(--card-border);
+  border-radius: 6px;
+  padding: 0.22em 0.6em;
+  font-size: 0.85em;
+}
+.ts-couche.faite { border-left-color: var(--ok); }
+.ts-couche.active {
+  border-left-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--card-bg));
+}
+.ts-pdu { color: var(--fg-muted); font-size: 0.8em; font-style: italic; }
+
+.ts-paquet { display: flex; justify-content: center; }
+.ts-enveloppe {
+  border: 2px solid var(--card-border);
+  border-radius: 8px;
+  padding: 0.3em;
+  background: var(--card-bg);
+}
+.ts-enveloppe.neuve { animation: ts-pop 0.4s ease; }
+@keyframes ts-pop {
+  from { transform: scale(0.88); opacity: 0.4; }
+  to { transform: scale(1); opacity: 1; }
+}
+.ts-h-transport { border-color: var(--accent); }
+.ts-h-internet { border-color: var(--accent-2); }
+.ts-h-acces { border-color: var(--warn); }
+.ts-entete {
+  display: block;
+  font-size: 0.7em;
+  font-weight: 700;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  color: var(--fg-muted);
+  margin-bottom: 0.2em;
+}
+.ts-charge {
+  background: var(--code-bg);
+  border: 1px dashed var(--code-border);
+  border-radius: 5px;
+  padding: 0.3em 0.5em;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.75em;
+  color: var(--fg);
+  white-space: nowrap;
+}
+
+/* perte de segment : TCP vs UDP */
+.ts-perte { display: grid; gap: 0.4em; }
+.ts-voie {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: 0.35em 0.6em;
+  font-size: 0.85em;
+}
+.ts-voie.tcp { border-left: 3px solid var(--ok); }
+.ts-voie.udp { border-left: 3px solid var(--warn); }
+.ts-voie-pistes { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3em; margin-top: 0.2em; }
+.ts-seg {
+  display: inline-grid;
+  place-items: center;
+  width: 1.7em; height: 1.7em;
+  border-radius: 5px;
+  background: var(--bg-alt);
+  border: 1px solid var(--accent);
+  font-size: 0.85em;
+  font-weight: 700;
+}
+.ts-seg.perdu { border-color: var(--danger); color: var(--danger); opacity: 0.45; text-decoration: line-through; }
+.ts-seg.renvoi { border-color: var(--ok); color: var(--ok); animation: ts-pop 0.4s ease; }
+.ts-flag { font-size: 0.78em; color: var(--fg-muted); }
+.ts-recu { flex-basis: 100%; font-size: 0.8em; color: var(--fg-muted); }
+.ts-recu.ok { color: var(--ok); }
+.ts-recu.ko { color: var(--danger); }
+
+/* ================= hv- : console d'API + table produits ================= */
+
+.hv-stage { display: grid; grid-template-columns: 1.15fr 1fr; gap: 0.6em; }
+.hv-col { display: grid; grid-template-rows: auto 1fr; gap: 0.2em; min-width: 0; }
+.hv-col-titre {
+  font-size: 0.7em;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg-muted);
+}
+.hv-journal {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 8px;
+  padding: 0.35em 0.5em;
+  height: 5.6em;
+  overflow-y: auto;
+  font-size: 0.78em;
+}
+.hv-ligne { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.35em; margin-bottom: 0.15em; }
+.hv-ligne code { background: none; border: none; padding: 0; color: var(--fg); font-size: 0.95em; }
+.hv-note { color: var(--fg-muted); font-style: italic; margin: 0.25em 0 0.1em; }
+.hv-verbe {
+  font-weight: 800;
+  border-radius: 4px;
+  padding: 0 0.35em;
+  color: #fff;
+  font-size: 0.9em;
+}
+.v-get { background: #1a8f5e; }
+.v-post { background: #2b4cd6; }
+.v-put { background: #c77d10; }
+.v-patch { background: #7c6cf0; }
+.v-delete { background: #c2334d; }
+.hv-code { font-weight: 800; font-variant-numeric: tabular-nums; }
+.hv-code.c2 { color: var(--ok); }
+.hv-code.c4 { color: var(--warn); }
+.hv-code.c5 { color: var(--danger); }
+.hv-texte { color: var(--fg-muted); }
+
+.hv-table-wrap {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: 0.3em;
+  height: 5.6em;
+  overflow-y: auto;
+}
+.hv-table { width: 100%; border-collapse: collapse; font-size: 0.78em; }
+.hv-table th {
+  text-align: left;
+  color: var(--fg-muted);
+  font-weight: 600;
+  border-bottom: 1px solid var(--card-border);
+  padding: 0.1em 0.35em;
+}
+.hv-table td { padding: 0.15em 0.35em; border-bottom: 1px solid var(--card-border); }
+.hv-table td.vide { color: var(--danger); font-weight: 700; }
+.hv-table tr.flash td { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+.hv-vide { color: var(--fg-muted); font-style: italic; font-size: 0.8em; padding: 0.3em; }
+
+
+/* ============ rc- : le système commun aux six frames des contraintes ============ */
+
+/* Le décor est monté UNE fois et reste affiché pendant les six frames. Sans lui, chaque
+   énoncé parlait d'« une réponse », d'« un cache » ou du « catalogue » sans que rien ne dise
+   de quoi il s'agissait. Il ne calcule rien : c'est un repère, pas une simulation. */
+.rc-systeme {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3em;
+  width: 100%;
+  font-size: 0.62em;
+}
+.rc-legende { color: var(--fg-muted); }
+.rc-rangee {
+  display: flex;
+  align-items: stretch;
+  gap: 0.4em;
+  flex-wrap: wrap;
+}
+.rc-fleche { color: var(--fg-muted); align-self: center; }
+.rc-groupe {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2em;
+  padding: 0.25em 0.4em;
+  border: 1px solid transparent;
+  border-radius: 8px;
+}
+/* La partie que la frame courante met en jeu. Un repère où regarder — au même titre qu'un
+   `cue`, et sans rien révéler de la réponse. */
+.rc-groupe.vise {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+.rc-puces { display: flex; gap: 0.25em; flex-wrap: wrap; }
+.rc-puce {
+  padding: 0.1em 0.5em;
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
+  background: var(--card-bg);
+  white-space: nowrap;
+}
+.rc-titre { color: var(--fg-muted); font-size: 0.9em; }

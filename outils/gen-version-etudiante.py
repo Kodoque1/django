@@ -11,7 +11,9 @@ Pour chaque module du cours :
 
 Usage : python3 outils/gen-version-etudiante.py
 """
+import os
 import re
+import shutil
 from pathlib import Path
 
 DEPOT = Path(__file__).resolve().parent.parent
@@ -83,10 +85,10 @@ def generer(module: str):
         key=lambda p: p.name,
     ) if (COURS / module / "js" / "widgets").exists() else []
 
-    rel = lambda p: f"../cours/{p}"
+    rel = lambda p: f"assets/{p}"
     css = "\n".join(f'  <link rel="stylesheet" href="{rel(c)}">' for c in SOCLE_CSS)
     js_module = "\n".join(
-        f'  <script src="../cours/{module}/js/widgets/{p.name}"></script>'
+        f'  <script src="assets/widgets/{module}/{p.name}"></script>'
         for p in scripts_module
     )
     js_avant = "\n".join(f'  <script src="{rel(j)}"></script>' for j in SOCLE_JS_AVANT)
@@ -102,8 +104,8 @@ def generer(module: str):
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E" />
 {css}
-  <script src="../cours/js/theme.js"></script>
-  <script src="../cours/js/pi-frames.js"></script>
+  <script src="{rel('js/theme.js')}"></script>
+  <script src="{rel('js/pi-frames.js')}"></script>
 </head>
 <body>
   <div class="reveal">
@@ -181,9 +183,29 @@ def index():
     print(f"  ✓ index.html")
 
 
+def copier_assets():
+    """Copie le socle (vendor, css, js, widgets) dans assets/ — la version étudiante
+    est autonome : elle fonctionne même servie depuis son propre dossier, ou dézippée
+    seule hors du dépôt."""
+    import shutil
+    assets = OUT / "assets"
+    if assets.exists():
+        shutil.rmtree(assets)
+    assets.mkdir()
+    for d in ("vendor", "css", "js"):
+        shutil.copytree(COURS / d, assets / d)
+    for m in MODULES:
+        w = COURS / m / "js" / "widgets"
+        if w.is_dir():
+            shutil.copytree(w, assets / "widgets" / m)
+    n = sum(len(f) for _, _, f in os.walk(assets))
+    print(f"  ✓ assets/ copié ({n} fichiers) — version autonome")
+
+
 def main():
     OUT.mkdir(exist_ok=True)
     print("Génération version étudiante…")
+    copier_assets()
     for m in MODULES:
         generer(m)
     index()
