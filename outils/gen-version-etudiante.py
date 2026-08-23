@@ -31,7 +31,7 @@ MODULES = [
 # Le socle chargé par tout deck (relatif à cours/)
 SOCLE_CSS = [
     "vendor/reveal/dist/reveal.css",
-    "vendor/reveal/dist/theme/black.css",
+    "vendor/reveal/dist/theme/white.css",
     "vendor/reveal/plugin/highlight/monokai.css",
     "css/theme-ipssi.css",
     "css/widgets.css",
@@ -97,10 +97,10 @@ def generer(module: str):
     corps = "\n".join(slides)
 
     page = f"""<!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" data-theme="light">
 <head>
   <meta charset="utf-8">
-  <title>{titre} — version étudiante</title>
+  <title>{titre}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E" />
 {css}
@@ -144,14 +144,14 @@ def index():
         for m, (j, t) in TITRES.items()
     )
     page = f"""<!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" data-theme="light">
 <head>
   <meta charset="utf-8">
-  <title>Cours Django IPSSI — version étudiante</title>
+  <title>Cours Django IPSSI</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E" />
   <style>
-    :root {{ --fond: #14161a; --carte: #1d2026; --bord: #2c313a; --accent: #e85d04; --texte: #e8e6e3; --doux: #9a958e; }}
+    :root {{ --fond: #ffffff; --carte: #f6f4f1; --bord: #ddd8d2; --accent: #e85d04; --texte: #26221e; --doux: #7a736a; }}
     * {{ box-sizing: border-box; }}
     body {{ margin: 0; font-family: system-ui, sans-serif; background: var(--fond); color: var(--texte); line-height: 1.6; }}
     main {{ max-width: 720px; margin: 0 auto; padding: 3rem 1.5rem; }}
@@ -170,8 +170,8 @@ def index():
 </head>
 <body>
   <main>
-    <h1>Cours Django <span>IPSSI</span> — version étudiante</h1>
-    <p class="sous">Les jeux de chaque journée. Le cours reste projeté en séance ; ici, vous rejouez les mécanismes.</p>
+    <h1>Cours Django <span>IPSSI</span></h1>
+    <p class="sous">Les jeux de chaque journée.</p>
     <ul>
 {liens}
     </ul>
