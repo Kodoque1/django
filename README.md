@@ -125,28 +125,161 @@ Le détail des choix — pourquoi telle notion relève d'une frame et non d'un j
 
 ---
 
-## Calendrier consolidé
+## Timing journée par journée
 
-| Jour | Programme | Deck | Jeux | TP d'instrumentation | TP de la fiche |
-|---|---|---|---|---|---|
-| **1** | I + II | ✅ module I · ✅ module II (2 simulations + 18 frames) | ✅ les 5 jeux (50 min) · ⏳ **A niveaux 1-5** (30 min) · ⏳ E (20 min) | — | préparation de l'environnement · rappel Python 3 |
-| **2** | III | ⏳ module III | ⏳ **A niveaux 6-7** (20 min) · ⏳ C (35 min) | ✅ temps 1 + 2 (1 h 40) | premier projet Django · Postman |
-| **3** | — | — | — | ✅ temps 3 (1 h) · temps 5 (30 min, *pendant* le projet) | application complète full stack |
-| **4** | IV + V | ⏳ modules IV et V | ⏳ D (40 min) · ⏳ F′ (15 min) | ✅ temps 4 (1 h 10) | application sécurisée · QCM + TP individuel |
-| **5** | — | — | — | — | projet en monôme |
+Sept heures de contact par jour (9 h – 17 h, une heure de déjeuner). Le principe : **le pratique
+d'abord** — on monte un premier Django avant de parler des fondamentaux, et chaque bloc de cours
+est suivi d'une manipulation. Les activités renvoient aux jeux de frames de la version étudiante
+(`version-etudiante/`) ; les temps de TP renvoient à `tp-instrumentation/` et aux fiches
+`TP-JOUR*.md`.
 
-**Deux arbitrages tranchés ici.**
+### Jour 1 — Un premier Django qui tourne, puis ce qui circule dessous
 
-1. **Le jeu A est scindé** : niveaux 1-5 (routage, vues, ORM) au Jour 1, niveaux 6-7 (migrations)
-   au Jour 2. Le Jour 1 porte déjà cinq jeux, un TP d'environnement et un rappel Python ; A dure
-   50 minutes d'un bloc. La coupure est gratuite — le monde `django-lite` est sérialisable
-   (`snapshot()`), donc la table peuplée au Jour 1 est retrouvée au Jour 2 — et elle *améliore*
-   le jeu : l'irréversibilité d'une migration frappe davantage sur des données qu'on a vues vivre
-   la veille. Au Jour 2, les migrations précèdent naturellement III.B « Modèles ».
-2. **Le Jour 3 est la journée la plus chargée** : TP projet + temps 3 (1 h) + temps 5 (30 min).
-   Le temps 5 (django-debug-toolbar) se joue **dans** le projet, pas en bloc — c'est son intérêt.
-   Si l'horaire déborde, sacrifier le temps 5 avant le temps 3 : la toolbar se rattrape seule, le
-   comptage de requêtes non.
+| Horaire | Durée | Quoi | Support |
+|---|---|---|---|
+| 9 h 00 | 20 min | **TP 0 — environnement** : venv, `pip install`, `verifier.py` 22/22 | `TP-JOUR1.md` §1–3 |
+| 9 h 20 | 40 min | **Rappel Python 3** : pathlib, `with`, compréhensions, dataclasses, Decimal | `TP-JOUR1.md` §4 |
+| 10 h 00 | 55 min | **TP — premier projet Django** : `startproject`, modèle `Produit`, sérialiseur, vue, URLs, serveur | `TP-JOUR2.md` §1–8 |
+| 10 h 55 | 15 min | *pause* | |
+| 11 h 10 | 30 min | **Activités** : Le routage, règle par règle · Le routeur essaie dans l'ordre | version étudiante, J1-02 |
+| 11 h 40 | 30 min | **Postman sur son propre projet** : GET/POST, lire le corps *et* le statut | `TP-JOUR2.md` §9 |
+| 12 h 10 | 50 min | *déjeuner* | |
+| 13 h 00 | 25 min | **Activité** : Anatomie d'une URL | version étudiante, J1-01 |
+| 13 h 25 | 55 min | **TP t1 — l'URL et le routage** (resolve, 404, APPEND_SLASH, reverse) | TP instrumentation, temps 1 |
+| 14 h 20 | 15 min | *pause* | |
+| 14 h 35 | 25 min | **Activités** : Les trois inventions du Web · Emballer, envoyer, déballer | version étudiante, J1-01 |
+| 15 h 00 | 45 min | **TP t2 — les middlewares** (écrire sa sonde, l'ordre) | TP instrumentation, temps 2 |
+| 15 h 45 | 30 min | **Activités** : D'un hôte à l'autre · Le bon verbe | version étudiante, J1-01 |
+| 16 h 15 | 30 min | **Activités** : Le triage · La boucle complète | version étudiante, J1-01 |
+| 16 h 45 | 15 min | Bilan du jour, questions | |
+
+Total activités J1 : 8. Le TP « préparation de l'environnement » de la fiche est couvert par le
+bloc de 9 h ; le rappel Python aussi.
+
+### Jour 2 — DRF : de l'ORM à l'API consommée
+
+| Horaire | Durée | Quoi | Support |
+|---|---|---|---|
+| 9 h 00 | 30 min | **Activités** : Les middlewares, à l'aller et au retour · Compter les requêtes avant de les mesurer | version étudiante, J1-02 |
+| 9 h 30 | 40 min | **TP t3 — l'ORM** : QuerySet paresseux, fabriquer un N+1, select/prefetch | TP instrumentation, temps 3 |
+| 10 h 10 | 20 min | **Activité** : Récupérer un objet — et le bon code d'état | version étudiante, J1-02 |
+| 10 h 30 | 15 min | *pause* | |
+| 10 h 45 | 30 min | **Activités** : Valider, convertir, refuser · Deux URL : qui répond à quoi ? | version étudiante, J2-01 |
+| 11 h 15 | 45 min | **TP — l'API complète** : CRUD, pagination, filtres sur le projet de la veille | `TP-JOUR3.md` §1–4 |
+| 12 h 00 | 50 min | *déjeuner* | |
+| 12 h 50 | 30 min | **Activités** : Compter avant de mesurer · Cinq frames côté client | version étudiante, J2-01 |
+| 13 h 20 | 30 min | **TP — consommer** : `consommer.py` (requests), notebook | `TP-JOUR3.md` §5–6 |
+| 13 h 50 | 25 min | **Activité** : Une page, deux origines (CORS) | version étudiante, J2-01 |
+| 14 h 15 | 30 min | **TP t5 — django-debug-toolbar** dans le projet | TP instrumentation, temps 5 |
+| 14 h 45 | 15 min | *pause* | |
+| 15 h 00 | 1 h 30 | **Projet guidé full-stack** : démarrage (modèles, seed, endpoints) | `TP-JOUR3.md` |
+| 16 h 30 | 30 min | **Activité** : Retirez la contrainte (REST en contrefactuel) | version étudiante, J1-01 |
+
+Total activités J2 : 8. Le temps 5 se joue *dans* le projet — c'est son intérêt.
+
+### Jour 3 — Projet encadré (journée projet)
+
+| Horaire | Durée | Quoi | Support |
+|---|---|---|---|
+| 9 h 00 | 15 min | Objectifs du projet, choix du sujet | `TP-JOUR3.md` §0 |
+| 9 h 15 | 1 h 45 | **Projet — bloc 1** : modèles, migrations, seed | |
+| 11 h 00 | 15 min | *pause* | |
+| 11 h 15 | 1 h | **Projet — bloc 2** : sérialiseurs, vues, URLs | |
+| 12 h 15 | 50 min | *déjeuner* | |
+| 13 h 05 | 30 min | **Activité** : Le bon verbe, revisitée sur SON projet | version étudiante, J1-01 |
+| 13 h 35 | 1 h 15 | **Projet — bloc 3** : pagination, filtres, consommation client | |
+| 14 h 50 | 15 min | *pause* | |
+| 15 h 05 | 30 min | **Activités** : Le triage (revisitée) · Lire un refus | version étudiante, J1-01 · J4-01 |
+| 15 h 35 | 1 h 20 | **Projet — bloc 4** : mise en commun, revue croisée entre binômes | |
+
+Total activités J3 : 3 — toutes revisitées sur le projet de l'étudiant (second passage, régime
+différent).
+
+### Jour 4 — Sécuriser : autorisations puis authentification
+
+| Horaire | Durée | Quoi | Support |
+|---|---|---|---|
+| 9 h 00 | 25 min | **Activités** : Qui franchit la vue ? · Vue contre projet : qui décide ? | version étudiante, J4-01 |
+| 9 h 25 | 30 min | **TP — utilisateurs et permissions** : `create_user`, `IsAdminOrReadOnly` | `TP-JOUR4.md` §2, §5 |
+| 9 h 55 | 25 min | **Activité** : Lire un refus (401 contre 403) | version étudiante, J4-01 |
+| 10 h 20 | 30 min | **TP — tester les permissions** : la grille client/admin | `TP-JOUR4.md` §6 |
+| 10 h 50 | 15 min | *pause* | |
+| 11 h 05 | 25 min | **Activité** : Écrire sa propre règle | version étudiante, J4-01 |
+| 11 h 30 | 30 min | **TP — permission objet** (ownership) | `TP-JOUR4.md` §7 |
+| 12 h 00 | 50 min | *déjeuner* | |
+| 12 h 50 | 25 min | **Activités** : Qui a rempli request.user ? · Le client qui n'envoie rien | version étudiante, J4-02 |
+| 13 h 15 | 25 min | **Activité** : Une identité en en-tête | version étudiante, J4-02 |
+| 13 h 40 | 40 min | **TP — jetons** : `TokenAuthentication`, 401 + `WWW-Authenticate` | `TP-JOUR4.md` §3–4 |
+| 14 h 20 | 15 min | *pause* | |
+| 14 h 35 | 25 min | **Activités** : Qui tourne quand la vue n'écrit rien ? · Dans quel ordre les poser ? | version étudiante, J4-02 |
+| 15 h 00 | 25 min | **Activité** : Du projet vierge à l'en-tête exact | version étudiante, J4-02 |
+| 15 h 25 | 50 min | **TP — sécuriser SON projet** | `TP-JOUR4.md` §8–9 |
+| 16 h 15 | 30 min | **QCM en ligne** (évaluation) | |
+| 16 h 45 | 15 min | Bilan | |
+
+Total activités J4 : 7.
+
+### Jour 5 — Projet individuel évalué
+
+| Horaire | Durée | Quoi | Support |
+|---|---|---|---|
+| 9 h 00 | 20 min | Sujet tiré, cahier des charges, structure du dépôt | `TP-JOUR5.md` §1–3 |
+| 9 h 20 | 1 h 40 | **Projet — bloc 1** : setup, modèles, migrations, seed | timebox §4 |
+| 11 h 00 | 15 min | *pause* | |
+| 11 h 15 | 1 h | **Projet — bloc 2** : API CRUD + pagination/filtres | |
+| 12 h 15 | 50 min | *déjeuner* | |
+| 13 h 05 | 45 min | **Projet — bloc 3** : jetons + permissions | |
+| 13 h 50 | 15 min | *pause* | |
+| 14 h 05 | 45 min | **Projet — bloc 4** : client.py + debug-toolbar (chasser le N+1) | |
+| 14 h 50 | 30 min | **Activités en autonomie** — reprendre celles qui ont échoué la première fois | version étudiante |
+| 15 h 20 | 1 h 10 | **Soutenances** (5 min × étudiant) + grille | `TP-JOUR5.md` §8, §10 |
+| 16 h 30 | 30 min | QCM final, bilan de semaine | |
+
+---
+
+## Activités de secours — meubler si un bloc déborde
+
+Les gros jeux (A, C, D, E, F′) sont reportés ; voici de quoi tenir une salle sans préparation.
+Tout se joue dans la version étudiante ou dans le REPL du TP — rien à préparer.
+
+### Activités éclair (5–15 min, aucun prérequis)
+
+| Activité | Où | Quand la sortir |
+|---|---|---|
+| **Le triage** — classer des codes d'état | version étudiante, J1-01 | un « c'est quoi un 418 ? » ; avant tout débogage HTTP |
+| **Le bon verbe** — PUT/PATCH/POST/DELETE | version étudiante, J1-01 | confusion PUT/PATCH au moment du TP CRUD |
+| **Anatomie d'une URL** — les six parties | version étudiante, J1-01 | erreur 404 incomprise, débat sur un fragment `#` |
+| **Lire un refus** — 401 ou 403 ? | version étudiante, J4-01 | avant toute séance permissions/authentification |
+| **Qui tourne quand la vue n'écrit rien ?** | version étudiante, J4-02 | question du `DEFAULT_AUTHENTICATION_CLASSES` |
+
+### Ateliers REPL (15–30 min, venv du TP requis)
+
+| Atelier | Quoi | Quand |
+|---|---|---|
+| **Fabriquer un N+1 à la main** | deux lignes de vue, `CaptureQueriesContext` gonfle, corriger | si le temps 3 a été court |
+| **Casser APPEND_SLASH** | `APPEND_SLASH = False`, observer le 404, remettre | après le temps 1 |
+| **Inverser deux middlewares** | Chrono avant/après CommonMiddleware : la mesure disparaît | après le temps 2 |
+| **Le 400 qui explique** | poster un corps invalide, lire le champ par champ | avant le temps 4.4 |
+| **Base64 à la main** | `b64encode(b"etu:etu")`, décoder : ce n'est pas du chiffrement | au début de l'authentification |
+
+### Débats guidés (20–30 min, projecteur + tableau)
+
+| Débat | Amorce | Quand |
+|---|---|---|
+| **Retirez la contrainte** | « Que casse-t-on en retirant l'interface uniforme ? Le cache ? Les couches ? » | fin du module REST, créneau court |
+| **Session contre jeton** | « Une app mobile et un navigateur, la même API — que choisissez-vous ? » | transition IV → V |
+| **Où filtrer ?** | `filter()` en base ou comprehension Python — compter les requêtes | après le temps 3 |
+| **PUT : protocole contre framework** | le cas documenté où la mesure contredit le cours | au moment du PUT dans le projet |
+
+### Si le matériel manque (serveur down, réseau coupé)
+
+- **Version étudiante hors-ligne** : les 28 activités tournent en local — servir avec
+  `python3 -m http.server` depuis `version-etudiante/`.
+- **verifier.py comme démonstration** : le faire tourner devant la salle et commenter les 22
+  lignes vertes une à une — 30 minutes qui révisent toute la semaine.
+- **Lecture de verifier.py comme exercice** : 15 minutes pour prédire ce que teste l'étape 4.3,
+  puis exécution. C'est le corrigé exécutable de la fiche.
+
 
 ---
 
