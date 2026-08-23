@@ -8,3 +8,9 @@ __pycache__/
 # `cours/vendor/` n'est PAS ignoré, et ne doit pas l'être : le cours est hors-ligne
 # intégral, aucune page ne fait de requête réseau. Les dépendances vendorisées font
 # partie du dépôt.
+
+# Résidus d'exécution du TP (le rappel Python écrit test.txt, les tests écrivent data/)
+tp-instrumentation/test.txt
+tp-instrumentation/data/
+# Archive étudiante générée — `outils/gen-archive-etudiant.py` la reconstruit
+dist/
