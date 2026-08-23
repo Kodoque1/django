@@ -57,8 +57,8 @@ exit()
 REST_FRAMEWORK = {
     # ... pagination, filtres existants ...
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.SessionAuthentication",   # navigateur
         "rest_framework.authentication.TokenAuthentication",     # API clients
+        "rest_framework.authentication.SessionAuthentication",   # navigateur
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",  # défaut : connecté requis
@@ -67,6 +67,12 @@ REST_FRAMEWORK = {
 ```
 
 > **Important** : `rest_framework.authtoken` doit être dans `INSTALLED_APPS` (déjà fait si vous avez suivi le TP d'instrumentation).
+>
+> **L'ordre compte.** Quand un refus d'authentification arrive, DRF construit l'en-tête
+> `WWW-Authenticate` à partir du **premier** authentificateur de la liste
+> (`authenticators[0].authenticate_header()`). `SessionAuthentication` n'en fournit
+> pas : mis en tête, il transforme le 401 attendu en 403. `TokenAuthentication`
+> en première position garantit le couple 401 + `WWW-Authenticate: Token`.
 
 ---
 
@@ -105,11 +111,11 @@ from rest_framework import generics, permissions
 from .models import Produit, Categorie
 from .serializers import ProduitSerializer, CategorieSerializer
 
-# Permission custom : lecture pour tous, écriture pour admin seulement
+# Permission custom : lecture pour tout utilisateur AUTHENTIFIÉ, écriture pour admin
 class IsAdminOrReadOnly(permissions.BasePermission):
     def has_permission(self, request, view):
         if request.method in permissions.SAFE_METHODS:
-            return True
+            return bool(request.user and request.user.is_authenticated)
         return request.user and request.user.is_staff
 
 class ProduitListCreate(generics.ListCreateAPIView):
@@ -135,6 +141,11 @@ class CategorieDetail(generics.RetrieveUpdateDestroyAPIView):
     lookup_field = "pk"
     permission_classes = [IsAdminOrReadOnly]
 ```
+
+> **Piège** : `permission_classes = [IsAdminOrReadOnly]` **remplace** le défaut
+> `IsAuthenticated` de `settings.py`. Si `has_permission` rend `True` pour les méthodes
+> sûres sans vérifier l'identité, un client anonyme lit la liste — et le 401 attendu
+> n'arrive jamais. D'où le `is_authenticated` dans la branche lecture ci-dessus.
 
 ---
 
@@ -206,13 +217,13 @@ permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
 | Symptôme | Cause |
 |----------|-------|
 | `401` même avec bon token | `TokenAuthentication` pas dans `DEFAULT_AUTHENTICATION_CLASSES` |
+| `403` au lieu de `401` sans token | `SessionAuthentication` en première position de la liste (il ne fournit pas de `WWW-Authenticate`) — mettre `TokenAuthentication` en premier |
 | `403` pour admin sur POST | `is_staff` pas `True` sur l'utilisateur |
 | `ImproperlyConfigured: 'rest_framework.authtoken'` | App pas dans `INSTALLED_APPS` |
-| `WWW-Authenticate` absent | Middleware `AuthenticationMiddleware` manquant |
 
 ---
 
-## 10. Rappel概念 — 401 vs 403
+## 10. Rappel — 401 vs 403
 
 | Code | Signification | Quand |
 |------|---------------|-------|
