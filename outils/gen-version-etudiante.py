@@ -58,6 +58,8 @@ def widget_slides(html: str):
         bloc = m.group(0)
         # retirer les notes orateur (méta — le contrat §0 bis)
         bloc = re.sub(r'<aside class="notes">.*?</aside>', '', bloc, flags=re.S)
+        # « activité », pas « jeu » : la manette annonce un jeu, le crayon une activité
+        bloc = bloc.replace("🎮", "✎")
         # retirer les attributs de minutage éventuels
         slides.append(bloc)
     return slides
@@ -124,7 +126,7 @@ def generer(module: str):
 """
     dest = OUT / f"{module}.html"
     dest.write_text(page, encoding="utf-8")
-    print(f"  ✓ {module}: {len(slides)} jeu(x), {len(scripts_module)} script(s) → {dest.name}")
+    print(f"  ✓ {module}: {len(slides)} activité(s), {len(scripts_module)} script(s) → {dest.name}")
     return dest
 
 
@@ -140,7 +142,7 @@ TITRES = {
 def index():
     liens = "\n".join(
         f'    <li><a href="{m}.html"><span class="jour">{j}</span>'
-        f'<span class="titre-lien">{t}</span><span class="sujet">jouer</span></a></li>'
+        f'<span class="titre-lien">{t}</span><span class="sujet">ouvrir</span></a></li>'
         for m, (j, t) in TITRES.items()
     )
     page = f"""<!DOCTYPE html>
@@ -171,7 +173,7 @@ def index():
 <body>
   <main>
     <h1>Cours Django <span>IPSSI</span></h1>
-    <p class="sous">Les jeux de chaque journée.</p>
+    <p class="sous">Les activités de chaque journée.</p>
     <ul>
 {liens}
     </ul>
