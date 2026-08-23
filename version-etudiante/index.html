@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Cours Django IPSSI — version étudiante</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%90%8D%3C/text%3E%3C/svg%3E" />
+  <style>
+    :root { --fond: #14161a; --carte: #1d2026; --bord: #2c313a; --accent: #e85d04; --texte: #e8e6e3; --doux: #9a958e; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, sans-serif; background: var(--fond); color: var(--texte); line-height: 1.6; }
+    main { max-width: 720px; margin: 0 auto; padding: 3rem 1.5rem; }
+    h1 { font-size: 1.6rem; border-bottom: 2px solid var(--accent); padding-bottom: .6rem; }
+    h1 span { color: var(--accent); }
+    p.sous { color: var(--doux); margin-top: -.4rem; }
+    ul { list-style: none; padding: 0; margin-top: 2rem; display: grid; gap: .8rem; }
+    li a { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem;
+           background: var(--carte); border: 1px solid var(--bord); border-radius: 8px;
+           padding: 1rem 1.2rem; color: var(--texte); text-decoration: none; transition: border-color .15s; }
+    li a:hover { border-color: var(--accent); }
+    .jour { color: var(--accent); font-weight: 600; min-width: 5.5rem; }
+    .titre-lien { flex: 1; }
+    .sujet { color: var(--doux); font-size: .92em; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Cours Django <span>IPSSI</span> — version étudiante</h1>
+    <p class="sous">Les jeux de chaque journée. Le cours reste projeté en séance ; ici, vous rejouez les mécanismes.</p>
+    <ul>
+    <li><a href="J1-01-architecture-restful.html"><span class="jour">Jour 1</span><span class="titre-lien">Architecture RESTful</span><span class="sujet">jouer</span></a></li>
+    <li><a href="J1-02-architecture-django.html"><span class="jour">Jour 1–2</span><span class="titre-lien">Architecture Django</span><span class="sujet">jouer</span></a></li>
+    <li><a href="J2-01-drf.html"><span class="jour">Jour 2</span><span class="titre-lien">Django REST Framework</span><span class="sujet">jouer</span></a></li>
+    <li><a href="J4-01-autorisations.html"><span class="jour">Jour 4</span><span class="titre-lien">Autorisations</span><span class="sujet">jouer</span></a></li>
+    <li><a href="J4-02-authentification.html"><span class="jour">Jour 4</span><span class="titre-lien">Authentification</span><span class="sujet">jouer</span></a></li>
+    </ul>
+  </main>
+</body>
+</html>
